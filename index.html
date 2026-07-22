@@ -1,81 +1,98 @@
-// Función principal para procesar los datos de BigQuery sin filtrar a nadie
+// Función principal para recibir los datos de Verdi / API
 function procesarDatosDashboard(datosRaw) {
-    if (!datosRaw || !Array.isArray(datosRaw)) return;
+    if (!datosRaw || !Array.isArray(datosRaw)) {
+        console.error("Los datos recibidos no son un arreglo válido:", datosRaw);
+        return;
+    }
 
-    // 1. Renderizar la tabla directamente con los correos originales
+    // 1. Mostrar las filas en la tabla
     renderTabla(datosRaw);
     
-    // 2. Llenar los filtros de forma 100% dinámica
+    // 2. Cargar opciones en los selectores desplegables
     poblarFiltros(datosRaw);
     
-    // 3. Actualizar los contadores superiores (KPIs)
+    // 3. Actualizar tarjetas superiores
     actualizarKpis(datosRaw);
 }
 
-// Renderizar la tabla (Grid)
+// 1. Render de la Tabla (Grid)
 function renderTabla(datos) {
-    const tbody = document.getElementById('grid-body'); // Revisa que coincida con el ID de tu <tbody>
+    const tbody = document.getElementById('grid-body'); // Asegúrate que tu <tbody> en HTML tenga id="grid-body"
     if (!tbody) return;
-    
+
     tbody.innerHTML = '';
 
     datos.forEach(row => {
+        // Extraer el auditor (si viene correo o nombre, lo toma tal cual)
+        const auditor = row.AUDITOR || row.auditor || 'N/A';
+        const proceso = row.PROCESO || row.proceso || '-';
+        const idTransaccion = row.ID || row.id || '-';
+        
+        // Manejar la fecha
+        let fecha = '-';
+        if (row.FECHA_HORA) {
+            const f = row.FECHA_HORA.value || row.FECHA_HORA;
+            fecha = new Date(f).toLocaleString();
+        }
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${row.FECHA_HORA ? new Date(row.FECHA_HORA.value || row.FECHA_HORA).toLocaleString() : '-'}</td>
-            <td>${row.PROCESO || '-'}</td>
-            <td>${row.AUDITOR || '-'}</td>
-            <td>${row.ID || '-'}</td>
+            <td>${fecha}</td>
+            <td>${proceso}</td>
+            <td>${auditor}</td>
+            <td>${idTransaccion}</td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-// Poblar desplegables de Auditor y Proceso automáticamente
+// 2. Poblar desplegables de PROCESO y AUDITOR
 function poblarFiltros(datos) {
-    const selectAuditor = document.getElementById('filtro-auditor'); // Ajusta ID según tu HTML
-    const selectProceso = document.getElementById('filtro-proceso'); // Ajusta ID según tu HTML
+    const selectAuditor = document.getElementById('filtro-auditor');
+    const selectProceso = document.getElementById('filtro-proceso');
 
-    // Extraer valores únicos sin duplicados
-    const auditoresUnicos = [...new Set(datos.map(d => d.AUDITOR).filter(Boolean))].sort();
-    const procesosUnicos = [...new Set(datos.map(d => d.PROCESO).filter(Boolean))].sort();
+    // Obtener valores únicos
+    const auditoresUnicos = [...new Set(datos.map(d => d.AUDITOR || d.auditor).filter(Boolean))].sort();
+    const procesosUnicos = [...new Set(datos.map(d => d.PROCESO || d.proceso).filter(Boolean))].sort();
 
-    // Llenar Filtro de Auditores
+    // Cargar filtro de Auditores
     if (selectAuditor) {
         selectAuditor.innerHTML = '<option value="">Todos los Auditores</option>';
-        auditoresUnicos.forEach(auditor => {
-            const option = document.createElement('option');
-            option.value = auditor;
-            option.textContent = auditor;
-            selectAuditor.appendChild(option);
+        auditoresUnicos.forEach(aud => {
+            const opt = document.createElement('option');
+            opt.value = aud;
+            opt.textContent = aud;
+            selectAuditor.appendChild(opt);
         });
     }
 
-    // Llenar Filtro de Procesos
+    // Cargar filtro de Procesos (TMWH HU, OUT, etc.)
     if (selectProceso) {
         selectProceso.innerHTML = '<option value="">Todos los Procesos</option>';
-        procesosUnicos.forEach(proceso => {
-            const option = document.createElement('option');
-            option.value = proceso;
-            option.textContent = proceso;
-            selectProceso.appendChild(option);
+        procesosUnicos.forEach(proc => {
+            const opt = document.createElement('option');
+            opt.value = proc;
+            opt.textContent = proc;
+            selectProceso.appendChild(opt);
         });
     }
 }
 
-// Actualizar contadores superiores
+// 3. Actualizar KPIs
 function actualizarKpis(datos) {
-    const totalAuditorias = document.getElementById('kpi-total');
-    const totalAuditores = document.getElementById('kpi-auditores');
-    const totalProcesos = document.getElementById('kpi-procesos');
+    const elemTotal = document.getElementById('kpi-total');
+    const elemAuditores = document.getElementById('kpi-auditores');
+    const elemProcesos = document.getElementById('kpi-procesos');
 
-    if (totalAuditorias) totalAuditorias.innerText = datos.length;
-    if (totalAuditores) {
-        const auditoresPresentes = new Set(datos.map(d => d.AUDITOR).filter(Boolean));
-        totalAuditores.innerText = auditoresPresentes.size;
+    if (elemTotal) elemTotal.innerText = datos.length;
+
+    if (elemAuditores) {
+        const auditoresUnicos = new Set(datos.map(d => d.AUDITOR || d.auditor).filter(Boolean));
+        elemAuditores.innerText = auditoresUnicos.size;
     }
-    if (totalProcesos) {
-        const procesosPresentes = new Set(datos.map(d => d.PROCESO).filter(Boolean));
-        totalProcesos.innerText = procesosPresentes.size;
+
+    if (elemProcesos) {
+        const procesosUnicos = new Set(datos.map(d => d.PROCESO || d.proceso).filter(Boolean));
+        elemProcesos.innerText = procesosUnicos.size;
     }
 }
