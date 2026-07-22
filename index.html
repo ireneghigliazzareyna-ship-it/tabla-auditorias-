@@ -9,15 +9,18 @@
         .header { background-color: #2b2e63; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         .header h1 { margin: 0; font-size: 24px; }
         .header p { margin: 5px 0 0 0; color: #ffe600; font-weight: bold; }
-        .filters { display: flex; gap: 15px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .filter-group { display: flex; flex-direction: column; flex: 1; }
+        
+        .filters { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); align-items: flex-end; }
+        .filter-group { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
         .filter-group label { font-size: 12px; font-weight: bold; margin-bottom: 5px; color: #2b2e63; }
         select, input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        .btn-clear { background-color: #ffe600; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; align-self: flex-end; }
+        .btn-clear { background-color: #ffe600; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; height: 40px; }
+
         .kpi-container { display: flex; gap: 20px; margin-bottom: 20px; }
         .kpi-card { background: white; padding: 15px; border-radius: 8px; flex: 1; border-left: 5px solid #2b2e63; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .kpi-card p { margin: 0; font-size: 12px; color: #666; font-weight: bold; text-transform: uppercase; }
         .kpi-card h2 { margin: 10px 0 0 0; font-size: 28px; color: #2b2e63; }
+
         .table-container { background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .table-title { background: #2b2e63; color: white; padding: 12px 20px; margin: 0; font-size: 14px; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
@@ -45,6 +48,14 @@
             <select id="filtro-proceso" onchange="aplicarFiltros()">
                 <option value="">Todos los Procesos</option>
             </select>
+        </div>
+        <div class="filter-group">
+            <label>FECHA DESDE</label>
+            <input type="date" id="filtro-fecha-inicio" onchange="aplicarFiltros()">
+        </div>
+        <div class="filter-group">
+            <label>FECHA HASTA</label>
+            <input type="date" id="filtro-fecha-fin" onchange="aplicarFiltros()">
         </div>
         <button class="btn-clear" onclick="limpiarFiltros()">Limpiar Filtros</button>
     </div>
@@ -81,34 +92,50 @@
     </div>
 
     <script>
-        let datosGlobales = []; // Guardará los datos cargados desde la consulta
+        let datosGlobales = [];
 
-        // Función invocada al recibir datos de BigQuery / Verdi
+        // Esta función debe llamarse al recibir los datos de Verdi / BigQuery
         function procesarDatosDashboard(datosRaw) {
             if (!datosRaw || !Array.isArray(datosRaw)) return;
             
             datosGlobales = datosRaw;
 
-            // Poblamos desplegables por primera vez
+            // 1. Llenar los menús desplegables con todos los auditores y procesos reales
             poblarFiltros(datosGlobales);
             
-            // Renderizamos tabla y KPIs
+            // 2. Dibujar la tabla y los KPIs
             aplicarFiltros();
         }
 
         function aplicarFiltros() {
             const auditorSeleccionado = document.getElementById('filtro-auditor').value;
             const procesoSeleccionado = document.getElementById('filtro-proceso').value;
+            const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
+            const fechaFin = document.getElementById('filtro-fecha-fin').value;
 
-            // Filtrado dinámico
             const datosFiltrados = datosGlobales.filter(row => {
                 const aud = row.AUDITOR || row.auditor || '';
                 const proc = row.PROCESO || row.proceso || '';
+                
+                // Fecha del registro
+                const rawFecha = row.FECHA_HORA ? (row.FECHA_HORA.value || row.FECHA_HORA) : null;
+                const fechaObj = rawFecha ? new Date(rawFecha) : null;
 
+                // Validación de filtros
                 const cumpleAuditor = !auditorSeleccionado || aud === auditorSeleccionado;
                 const cumpleProceso = !procesoSeleccionado || proc === procesoSeleccionado;
+                
+                let cumpleFechaInicio = true;
+                if (fechaInicio && fechaObj) {
+                    cumpleFechaInicio = fechaObj >= new Date(fechaInicio + "T00:00:00");
+                }
 
-                return cumpleAuditor && cumpleProceso;
+                let cumpleFechaFin = true;
+                if (fechaFin && fechaObj) {
+                    cumpleFechaFin = fechaObj <= new Date(fechaFin + "T23:59:59");
+                }
+
+                return cumpleAuditor && cumpleProceso && cumpleFechaInicio && cumpleFechaFin;
             });
 
             renderTabla(datosFiltrados);
@@ -125,19 +152,14 @@
                 const proceso = row.PROCESO || row.proceso || '-';
                 const idTransaccion = row.ID || row.id || '-';
                 
-                // Formato legible para la fecha y el día
                 let fechaFormateada = '-';
                 if (row.FECHA_HORA) {
                     const rawFecha = row.FECHA_HORA.value || row.FECHA_HORA;
                     const d = new Date(rawFecha);
                     if (!isNaN(d.getTime())) {
                         fechaFormateada = d.toLocaleString('es-MX', { 
-                            year: 'numeric', 
-                            month: '2-digit', 
-                            day: '2-digit',
-                            hour: '2-digit', 
-                            minute: '2-digit', 
-                            second: '2-digit' 
+                            year: 'numeric', month: '2-digit', day: '2-digit',
+                            hour: '2-digit', minute: '2-digit', second: '2-digit' 
                         });
                     } else {
                         fechaFormateada = rawFecha;
@@ -159,7 +181,6 @@
             const selectAuditor = document.getElementById('filtro-auditor');
             const selectProceso = document.getElementById('filtro-proceso');
 
-            // Extrae correos y procesos sin duplicados
             const auditoresUnicos = [...new Set(datos.map(d => d.AUDITOR || d.auditor).filter(Boolean))].sort();
             const procesosUnicos = [...new Set(datos.map(d => d.PROCESO || d.proceso).filter(Boolean))].sort();
 
@@ -197,6 +218,8 @@
         function limpiarFiltros() {
             document.getElementById('filtro-auditor').value = '';
             document.getElementById('filtro-proceso').value = '';
+            document.getElementById('filtro-fecha-inicio').value = '';
+            document.getElementById('filtro-fecha-fin').value = '';
             aplicarFiltros();
         }
     </script>
