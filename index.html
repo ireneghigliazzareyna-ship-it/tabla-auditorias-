@@ -1,389 +1,116 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auditoría MXNL01 - PI PROCESS IMPROVEMENT</title>
-    <style>
-        :root {
-            --brand-blue: #2d3274;
-            --brand-yellow: #ffe600;
-            --bg-gray: #eef2f5;
-            --card-bg: #ffffff;
-            --text-color: #333333;
+// 1. Lista oficial de Auditores Activos y sus nombres legibles
+const AUDITORES_ACTIVOS = [
+    { nombre: "Araceli Chavira", keywords: ["araceli", "chavira"] },
+    { nombre: "Angelica Garcia", keywords: ["angelica", "garcia"] },
+    { nombre: "Adonnay Ramirez", keywords: ["adonnay", "ramirez"] },
+    { nombre: "Alejandra Torres", keywords: ["alejandra", "torres"] },
+    { nombre: "Montserrat Covarrubias", keywords: ["montserrat", "covarrubias"] },
+    { nombre: "Irene Ghigliazza", keywords: ["irene", "ghigliazza"] },
+    { nombre: "Brenda Lira", keywords: ["brenda", "lira"] },
+    { nombre: "Blanca Esther", keywords: ["blanca", "martinez", "esther"] },
+    { nombre: "Andy Alois", keywords: ["andy", "alois"] }
+];
+
+// Función para mapear el correo al nombre exacto o descartarlo si no es activo
+function obtenerAuditorActivo(correo) {
+    if (!correo) return null;
+    const correoLower = correo.toLowerCase();
+
+    for (const auditor of AUDITORES_ACTIVOS) {
+        // Coincidencia si el correo contiene alguna palabra clave del auditor
+        const match = auditor.keywords.some(key => correoLower.includes(key));
+        if (match) {
+            return auditor.nombre;
         }
-
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background-color: var(--bg-gray);
-            margin: 0;
-            padding: 20px;
-            color: var(--text-color);
-        }
-
-        .container {
-            max-width: 1300px;
-            margin: 0 auto;
-        }
-
-        .header-banner {
-            background-color: var(--brand-blue);
-            color: white;
-            padding: 15px 25px;
-            border-radius: 6px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-
-        .header-banner h1 {
-            margin: 0;
-            font-size: 24px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .header-banner span {
-            color: var(--brand-yellow);
-            font-weight: bold;
-            font-size: 14px;
-            display: block;
-        }
-
-        .filters-section {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .filter-group label {
-            font-size: 11px;
-            font-weight: bold;
-            color: var(--brand-blue);
-            text-transform: uppercase;
-            margin-bottom: 5px;
-        }
-
-        .filter-group select, .filter-group input {
-            background-color: var(--brand-blue);
-            color: white;
-            border: none;
-            padding: 10px 12px;
-            border-radius: 4px;
-            font-size: 13px;
-            outline: none;
-            cursor: pointer;
-        }
-
-        .filter-group input[type="date"] {
-            color-scheme: dark;
-        }
-
-        .kpi-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .kpi-card {
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            border-left: 5px solid var(--brand-blue);
-        }
-
-        .kpi-title {
-            font-size: 12px;
-            color: #666;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        .kpi-value {
-            font-size: 22px;
-            font-weight: bold;
-            color: var(--brand-blue);
-        }
-
-        .table-section {
-            background: var(--card-bg);
-            border-radius: 6px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            overflow: hidden;
-        }
-
-        .table-header-title {
-            background-color: var(--brand-blue);
-            color: white;
-            padding: 12px 20px;
-            font-size: 14px;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
-        .table-wrapper {
-            max-height: 550px;
-            overflow-y: auto;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
-
-        th {
-            background-color: #f8f9fa;
-            color: var(--brand-blue);
-            font-weight: bold;
-            text-align: left;
-            padding: 12px;
-            border-bottom: 2px solid #ddd;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-
-        td {
-            padding: 10px 12px;
-            border-bottom: 1px solid #eee;
-        }
-
-        tr:hover {
-            background-color: #f1f4f9;
-        }
-
-        #loading {
-            text-align: center;
-            padding: 40px;
-            font-weight: bold;
-            color: var(--brand-blue);
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="header-banner">
-        <div>
-            <h1>Auditoría MXNL01</h1>
-            <span>PI - PROCESS IMPROVEMENT</span>
-        </div>
-    </div>
-
-    <!-- Filtros -->
-    <div class="filters-section">
-        <div class="filter-group">
-            <label for="filterAuditor">Auditor (Nombre)</label>
-            <select id="filterAuditor" onchange="applyFilters()">
-                <option value="">Todos los Auditores</option>
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="filterProceso">Proceso</label>
-            <select id="filterProceso" onchange="applyFilters()">
-                <option value="">Todos los Procesos</option>
-            </select>
-        </div>
-
-        <div class="filter-group">
-            <label for="filterFecha">Fecha</label>
-            <input type="date" id="filterFecha" onchange="applyFilters()">
-        </div>
-
-        <div class="filter-group">
-            <label style="opacity: 0;">Limpiar</label>
-            <button onclick="resetFilters()" style="background: var(--brand-yellow); color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">Limpiar Filtros</button>
-        </div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="kpi-container">
-        <div class="kpi-card">
-            <div class="kpi-title">Total Auditorías Filtradas</div>
-            <div class="kpi-value" id="kpiTotal">0</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-title">Auditores Activos</div>
-            <div class="kpi-value" id="kpiAuditores">0</div>
-        </div>
-        <div class="kpi-card">
-            <div class="kpi-title">Procesos Evaluados</div>
-            <div class="kpi-value" id="kpiProcesos">0</div>
-        </div>
-    </div>
-
-    <!-- Tabla -->
-    <div class="table-section">
-        <div class="table-header-title">Detalle de Registros de Auditoría</div>
-        <div id="loading">Cargando datos del dashboard...</div>
-        <div class="table-wrapper">
-            <table id="auditTable" style="display:none;">
-                <thead>
-                    <tr id="tableHeader"></tr>
-                </thead>
-                <tbody id="tableBody"></tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<script>
-    let rawData = [];
-
-    // Mapeo de Correos/IDs a Nombres Reales
-    const auditorNamesMap = {
-        'araceli.chavira@mercadolibre.com.mx': 'Araceli Chavira',
-        'angelica.garcia@mercadolibre.com.mx': 'Angelica Garcia',
-        'adonnay.ramirez@mercadolibre.com.mx': 'Adonnay Ramirez',
-        'alejandra.torres@mercadolibre.com.mx': 'Alejandra Torres',
-        'montserrat.covarrubias@mercadolibre.com.mx': 'Montserrat Covarrubias',
-        'irene.ghigliazza@mercadolibre.com.mx': 'Irene Ghigliazza',
-        'brenda.lira@mercadolibre.com.mx': 'Brenda Lira',
-        'blanca.martinezblanco@mercadolibre.com.mx': 'Blanca Esther',
-        'andy.alois@mercadolibre.com.mx': 'Andy Alois'
-    };
-
-    function getAuditorName(userValue) {
-        if (!userValue) return 'Desconocido';
-        const cleanUser = userValue.toLowerCase().trim();
-        return auditorNamesMap[cleanUser] || userValue;
     }
+    return null; // Si no coincide con ninguno, se considera inactivo
+}
 
-    fetch('data.json')
-        .then(response => response.json())
-        .then(data => {
-            rawData = data;
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('auditTable').style.display = 'table';
-            
-            populateDropdowns(data);
-            applyFilters();
-        })
-        .catch(err => {
-            document.getElementById('loading').innerText = 'Error al cargar los datos de auditorías.';
-            console.error(err);
-        });
+// Función principal que procesa la respuesta del query
+function procesarDatosDashboard(datosRaw) {
+    // 2. Filtrar solo los registros de auditores activos y mapear nombres
+    const datosFiltrados = [];
 
-    function populateDropdowns(data) {
-        const auditorSelect = document.getElementById('filterAuditor');
-        const procesoSelect = document.getElementById('filterProceso');
-
-        // Extraer auditores únicos mapeando sus nombres
-        const auditoresSet = new Set();
-        data.forEach(item => {
-            if (item.USUARIO) {
-                auditoresSet.add(getAuditorName(item.USUARIO));
-            }
-        });
-        const auditores = Array.from(auditoresSet).sort();
-
-        // Extraer TODOS los procesos dinámicamente del query
-        const procesos = [...new Set(data.map(item => item.PROCESO).filter(Boolean))].sort();
-
-        auditores.forEach(auditor => {
-            const opt = document.createElement('option');
-            opt.value = auditor;
-            opt.textContent = auditor;
-            auditorSelect.appendChild(opt);
-        });
-
-        procesos.forEach(proceso => {
-            const opt = document.createElement('option');
-            opt.value = proceso;
-            opt.textContent = proceso;
-            procesoSelect.appendChild(opt);
-        });
-    }
-
-    function applyFilters() {
-        const selectedAuditor = document.getElementById('filterAuditor').value;
-        const selectedProceso = document.getElementById('filterProceso').value;
-        const selectedFecha = document.getElementById('filterFecha').value;
-
-        const filtered = rawData.filter(item => {
-            const itemAuditorName = getAuditorName(item.USUARIO);
-            const matchAuditor = !selectedAuditor || itemAuditorName === selectedAuditor;
-            const matchProceso = !selectedProceso || item.PROCESO === selectedProceso;
-            
-            let matchFecha = true;
-            if (selectedFecha && item.FECHA_HORA) {
-                matchFecha = item.FECHA_HORA.startsWith(selectedFecha);
-            }
-
-            return matchAuditor && matchProceso && matchFecha;
-        });
-
-        renderTable(filtered);
-        updateKPIs(filtered);
-    }
-
-    function renderTable(data) {
-        const headerTr = document.getElementById('tableHeader');
-        const tbody = document.getElementById('tableBody');
-
-        headerTr.innerHTML = '';
-        tbody.innerHTML = '';
-
-        if (data.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">No se encontraron registros con los filtros seleccionados.</td></tr>';
-            return;
-        }
-
-        const headers = Object.keys(data[0]);
-        headers.forEach(header => {
-            const th = document.createElement('th');
-            th.innerText = header === 'USUARIO' ? 'AUDITOR' : header;
-            headerTr.appendChild(th);
-        });
-
-        // Muestra hasta 2000 filas de resultado filtrado para mantener alta velocidad
-        data.slice(0, 2000).forEach(row => {
-            const tr = document.createElement('tr');
-            headers.forEach(header => {
-                const td = document.createElement('td');
-                let cellValue = row[header] !== null ? row[header] : '';
-                
-                // Si la columna es USUARIO, mostramos el Nombre Completo
-                if (header === 'USUARIO') {
-                    cellValue = getAuditorName(cellValue);
-                }
-
-                td.innerText = cellValue;
-                tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-        });
-    }
-
-    function updateKPIs(data) {
-        document.getElementById('kpiTotal').innerText = data.length.toLocaleString();
+    datosRaw.forEach(item => {
+        const nombreValido = obtenerAuditorActivo(item.AUDITOR);
         
-        const uniqueAuditores = new Set(data.map(item => getAuditorName(item.USUARIO)).filter(Boolean)).size;
-        document.getElementById('kpiAuditores').innerText = uniqueAuditores;
+        // Si el auditor coincide con la lista activa, lo conservamos
+        if (nombreValido) {
+            datosFiltrados.push({
+                ...item,
+                AUDITOR: nombreValido // Reemplaza el correo por el nombre limpio
+            });
+        }
+    });
 
-        const uniqueProcesos = new Set(data.map(item => item.PROCESO).filter(Boolean)).size;
-        document.getElementById('kpiProcesos').innerText = uniqueProcesos;
+    // 3. Renderizar la tabla y poblar los dropdowns
+    renderTabla(datosFiltrados);
+    poblarFiltroProcesos(datosFiltrados);
+    poblarFiltroAuditores();
+    actualizarKpis(datosFiltrados);
+}
+
+// Render en la tabla (Grid)
+function renderTabla(datos) {
+    const tbody = document.getElementById('grid-body'); // Ajusta al ID de tu <tbody>
+    tbody.innerHTML = '';
+
+    datos.forEach(row => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${row.FECHA_HORA ? new Date(row.FECHA_HORA.value || row.FECHA_HORA).toLocaleString() : '-'}</td>
+            <td>${row.PROCESO || '-'}</td>
+            <td>${row.AUDITOR}</td>
+            <td>${row.ID || '-'}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Llenar Dropdown de Procesos dinámicamente con todos los que vengan en el query (TMWH HU, OUT, etc.)
+function poblarFiltroProcesos(datos) {
+    const selectProceso = document.getElementById('filtro-proceso'); // Ajusta ID del select
+    if (!selectProceso) return;
+
+    // Extraer procesos únicos ignorando nulos
+    const procesosUnicos = [...new Set(datos.map(d => d.PROCESO).filter(Boolean))].sort();
+
+    selectProceso.innerHTML = '<option value="">Todos los Procesos</option>';
+    procesosUnicos.forEach(proc => {
+        const option = document.createElement('option');
+        option.value = proc;
+        option.textContent = proc;
+        selectProceso.appendChild(option);
+    });
+}
+
+// Llenar Dropdown de Auditores solo con el equipo activo
+function poblarFiltroAuditores() {
+    const selectAuditor = document.getElementById('filtro-auditor'); // Ajusta ID del select
+    if (!selectAuditor) return;
+
+    selectAuditor.innerHTML = '<option value="">Todos los Auditores</option>';
+    AUDITORES_ACTIVOS.forEach(aud => {
+        const option = document.createElement('option');
+        option.value = aud.nombre;
+        option.textContent = aud.nombre;
+        selectAuditor.appendChild(option);
+    });
+}
+
+// Actualizar tarjetas de KPI con datos reales de la lista filtrada
+function actualizarKpis(datos) {
+    const totalAuditorias = document.getElementById('kpi-total');
+    const totalAuditores = document.getElementById('kpi-auditores');
+    const totalProcesos = document.getElementById('kpi-procesos');
+
+    if (totalAuditorias) totalAuditorias.innerText = datos.length;
+    if (totalAuditores) {
+        const auditoresConDatos = new Set(datos.map(d => d.AUDITOR));
+        totalAuditores.innerText = auditoresConDatos.size;
     }
-
-    function resetFilters() {
-        document.getElementById('filterAuditor').value = '';
-        document.getElementById('filterProceso').value = '';
-        document.getElementById('filterFecha').value = '';
-        applyFilters();
+    if (totalProcesos) {
+        const procesosPresentes = new Set(datos.map(d => d.PROCESO).filter(Boolean));
+        totalProcesos.innerText = procesosPresentes.size;
     }
-</script>
-
-</body>
-</html>
+}
