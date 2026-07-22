@@ -1,153 +1,68 @@
-<script>
-        let datosGlobales = [];
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Auditorías MXNL01</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
+        h2 { color: #333; }
+        table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #2e7d32; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        #status { font-weight: bold; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
 
-        // CARGA AUTOMÁTICA CON LECTURA DE ESTRUCTURA Y CACHÉ BYPASS
-        document.addEventListener("DOMContentLoaded", () => {
-            // Se le agrega timestamp ?v=... para evitar la caché de GitHub Pages
-            fetch('./data.json?v=' + new Date().getTime())
-                .then(response => {
-                    if (!response.ok) throw new Error("No se pudo leer data.json");
-                    return response.json();
-                })
-                .then(data => {
-                    // Si los datos vienen dentro de un objeto (ej. data.data, data.items, etc.)
-                    if (Array.isArray(data)) {
-                        datosGlobales = data;
-                    } else if (data && Array.isArray(data.data)) {
-                        datosGlobales = data.data;
-                    } else if (data && Array.isArray(data.body)) {
-                        datosGlobales = data.body;
-                    } else {
-                        datosGlobales = [];
-                    }
+    <h2>Auditorías - Site MXNL01</h2>
+    <div id="status">Cargando datos...</div>
 
-                    console.log("Datos cargados correctamente:", datosGlobales);
+    <table id="tabla" style="display:none;">
+        <thead>
+            <tr>
+                <th>Fecha / Hora</th>
+                <th>Proceso</th>
+                <th>Auditor</th>
+                <th>ID</th>
+            </tr>
+        </thead>
+        <tbody id="contenido"></tbody>
+    </table>
 
-                    // Poblar desplegables y renderizar
-                    poblarFiltros(datosGlobales);
-                    aplicarFiltros();
-                })
-                .catch(err => {
-                    console.error("Error al cargar data.json:", err);
+    <script>
+        fetch('data.json?v=' + new Date().getTime())
+            .then(response => {
+                if (!response.ok) throw new Error("No se pudo cargar data.json");
+                return response.json();
+            })
+            .then(data => {
+                const statusDiv = document.getElementById('status');
+                const tbody = document.getElementById('contenido');
+                
+                if (!data || data.length === 0) {
+                    statusDiv.innerText = "No se encontraron registros para MXNL01.";
+                    return;
+                }
+
+                statusDiv.innerText = `Total de registros cargados: ${data.length}`;
+                document.getElementById('tabla').style.display = 'table';
+
+                let html = '';
+                data.forEach(item => {
+                    html += `<tr>
+                        <td>${item.FECHA_HORA || ''}</td>
+                        <td>${item.PROCESO || ''}</td>
+                        <td>${item.AUDITOR || ''}</td>
+                        <td>${item.ID || ''}</td>
+                    </tr>`;
                 });
-        });
-
-        function aplicarFiltros() {
-            const auditorSeleccionado = document.getElementById('filtro-auditor').value;
-            const procesoSeleccionado = document.getElementById('filtro-proceso').value;
-            const fechaInicio = document.getElementById('filtro-fecha-inicio').value;
-            const fechaFin = document.getElementById('filtro-fecha-fin').value;
-
-            const datosFiltrados = datosGlobales.filter(row => {
-                const aud = row.AUDITOR || row.auditor || '';
-                const proc = row.PROCESO || row.proceso || '';
-                
-                const rawFecha = row.FECHA_HORA ? (row.FECHA_HORA.value || row.FECHA_HORA) : null;
-                const fechaObj = rawFecha ? new Date(rawFecha) : null;
-
-                const cumpleAuditor = !auditorSeleccionado || aud === auditorSeleccionado;
-                const cumpleProceso = !procesoSeleccionado || proc === procesoSeleccionado;
-                
-                let cumpleFechaInicio = true;
-                if (fechaInicio && fechaObj) {
-                    cumpleFechaInicio = fechaObj >= new Date(fechaInicio + "T00:00:00");
-                }
-
-                let cumpleFechaFin = true;
-                if (fechaFin && fechaObj) {
-                    cumpleFechaFin = fechaObj <= new Date(fechaFin + "T23:59:59");
-                }
-
-                return cumpleAuditor && cumpleProceso && cumpleFechaInicio && cumpleFechaFin;
+                tbody.innerHTML = html;
+            })
+            .catch(error => {
+                document.getElementById('status').innerText = "Error al cargar la información: " + error.message;
             });
-
-            renderTabla(datosFiltrados);
-            actualizarKpis(datosFiltrados);
-        }
-
-        function renderTabla(datos) {
-            const tbody = document.getElementById('grid-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            if (datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px; color: #888;">No se encontraron registros de auditoría.</td></tr>';
-                return;
-            }
-
-            datos.forEach(row => {
-                const auditor = row.AUDITOR || row.auditor || '-';
-                const proceso = row.PROCESO || row.proceso || '-';
-                const idTransaccion = row.ID || row.id || '-';
-                
-                let fechaFormateada = '-';
-                if (row.FECHA_HORA) {
-                    const rawFecha = row.FECHA_HORA.value || row.FECHA_HORA;
-                    const d = new Date(rawFecha);
-                    if (!isNaN(d.getTime())) {
-                        fechaFormateada = d.toLocaleString('es-MX', { 
-                            year: 'numeric', month: '2-digit', day: '2-digit',
-                            hour: '2-digit', minute: '2-digit', second: '2-digit' 
-                        });
-                    } else {
-                        fechaFormateada = rawFecha;
-                    }
-                }
-
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${fechaFormateada}</td>
-                    <td>${proceso}</td>
-                    <td>${auditor}</td>
-                    <td>${idTransaccion}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function poblarFiltros(datos) {
-            const selectAuditor = document.getElementById('filtro-auditor');
-            const selectProceso = document.getElementById('filtro-proceso');
-
-            const auditoresUnicos = [...new Set(datos.map(d => d.AUDITOR || d.auditor).filter(Boolean))].sort();
-            const procesosUnicos = [...new Set(datos.map(d => d.PROCESO || d.proceso).filter(Boolean))].sort();
-
-            if (selectAuditor) {
-                selectAuditor.innerHTML = '<option value="">Todos los Auditores</option>';
-                auditoresUnicos.forEach(aud => {
-                    const opt = document.createElement('option');
-                    opt.value = aud;
-                    opt.textContent = aud;
-                    selectAuditor.appendChild(opt);
-                });
-            }
-
-            if (selectProceso) {
-                selectProceso.innerHTML = '<option value="">Todos los Procesos</option>';
-                procesosUnicos.forEach(proc => {
-                    const opt = document.createElement('option');
-                    opt.value = proc;
-                    opt.textContent = proc;
-                    selectProceso.appendChild(opt);
-                });
-            }
-        }
-
-        function actualizarKpis(datos) {
-            const elemTotal = document.getElementById('kpi-total');
-            const elemAuditores = document.getElementById('kpi-auditores');
-            const elemProcesos = document.getElementById('kpi-procesos');
-
-            if (elemTotal) elemTotal.innerText = datos.length;
-            if (elemAuditores) elemAuditores.innerText = new Set(datos.map(d => d.AUDITOR || d.auditor).filter(Boolean)).size;
-            if (elemProcesos) elemProcesos.innerText = new Set(datos.map(d => d.PROCESO || d.proceso).filter(Boolean)).size;
-        }
-
-        function limpiarFiltros() {
-            document.getElementById('filtro-auditor').value = '';
-            document.getElementById('filtro-proceso').value = '';
-            document.getElementById('filtro-fecha-inicio').value = '';
-            document.getElementById('filtro-fecha-fin').value = '';
-            aplicarFiltros();
-        }
     </script>
+</body>
+</html>
