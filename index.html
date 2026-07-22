@@ -3,69 +3,355 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Auditorías MXNL01</title>
-    <!-- Estilos limpios y modernos -->
+    <title>Auditoría MXNL01 - PI PROCESS IMPROVEMENT</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
-        h1 { color: #2c3e50; }
-        .stats { margin-bottom: 20px; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #34495e; color: white; }
-        tr:hover { background-color: #f1f1f1; }
-        #loading { font-size: 1.2em; color: #666; }
+        :root {
+            --brand-blue: #2d3274;
+            --brand-yellow: #ffe600;
+            --bg-gray: #eef2f5;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: var(--bg-gray);
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        /* Banner estilo MeLi PI */
+        .header-banner {
+            background-color: var(--brand-blue);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header-banner h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .header-banner span {
+            color: var(--brand-yellow);
+            font-weight: bold;
+            font-size: 14px;
+            display: block;
+        }
+
+        /* Sección de Filtros */
+        .filters-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-group label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--brand-blue);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .filter-group select, .filter-group input {
+            background-color: var(--brand-blue);
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .filter-group input[type="date"] {
+            color-scheme: dark;
+        }
+
+        /* Tarjetas KPI */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--brand-blue);
+        }
+
+        .kpi-title {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .kpi-value {
+            font-size: 22px;
+            font-weight: bold;
+            color: var(--brand-blue);
+        }
+
+        /* Contenedor de Tabla */
+        .table-section {
+            background: var(--card-bg);
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+
+        .table-header-title {
+            background-color: var(--brand-blue);
+            color: white;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .table-wrapper {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--brand-blue);
+            font-weight: bold;
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background-color: #f1f4f9;
+        }
+
+        #loading {
+            text-align: center;
+            padding: 40px;
+            font-weight: bold;
+            color: var(--brand-blue);
+        }
     </style>
 </head>
 <body>
 
-    <h1>Auditorías MXNL01</h1>
-    <div class="stats" id="stats">Cargando registros...</div>
+<div class="container">
+    <!-- Header -->
+    <div class="header-banner">
+        <div>
+            <h1>Auditoría MXNL01</h1>
+            <span>PI - PROCESS IMPROVEMENT</span>
+        </div>
+    </div>
 
-    <div id="loading">Cargando datos desde GitHub...</div>
+    <!-- Filtros Interactivos -->
+    <div class="filters-section">
+        <div class="filter-group">
+            <label for="filterAuditor">Auditor (Usuario)</label>
+            <select id="filterAuditor" onchange="applyFilters()">
+                <option value="">Todos los Auditores</option>
+            </select>
+        </div>
 
-    <table id="auditTable" style="display:none;">
-        <thead>
-            <tr id="tableHeader"></tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+        <div class="filter-group">
+            <label for="filterProceso">Proceso</label>
+            <select id="filterProceso" onchange="applyFilters()">
+                <option value="">Todos los Procesos</option>
+            </select>
+        </div>
 
-    <script>
-        // Consume el archivo data.json cargado por n8n
-        fetch('data.json')
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('auditTable').style.display = 'table';
-                document.getElementById('stats').innerText = `Total de registros: ${data.length}`;
+        <div class="filter-group">
+            <label for="filterFecha">Fecha</label>
+            <input type="date" id="filterFecha" onchange="applyFilters()">
+        </div>
 
-                if (data.length === 0) return;
+        <div class="filter-group">
+            <label style="opacity: 0;">Limpiar</label>
+            <button onclick="resetFilters()" style="background: var(--brand-yellow); color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; cursor: pointer;">Limpiar Filtros</button>
+        </div>
+    </div>
 
-                // Generar encabezados automáticamente según las llaves de los objetos
-                const headers = Object.keys(data[0]);
-                const headerTr = document.getElementById('tableHeader');
-                headers.forEach(header => {
-                    const th = document.createElement('th');
-                    th.innerText = header;
-                    headerTr.appendChild(th);
-                });
+    <!-- KPIs -->
+    <div class="kpi-container">
+        <div class="kpi-card">
+            <div class="kpi-title">Total Auditorías Filtradas</div>
+            <div class="kpi-value" id="kpiTotal">0</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Auditores Activos</div>
+            <div class="kpi-value" id="kpiAuditores">0</div>
+        </div>
+        <div class="kpi-card">
+            <div class="kpi-title">Procesos Evaluados</div>
+            <div class="kpi-value" id="kpiProcesos">0</div>
+        </div>
+    </div>
 
-                // Llenar filas (limitado a las primeras 1000 para fluidez en navegador)
-                const tbody = document.getElementById('tableBody');
-                data.slice(0, 1000).forEach(row => {
-                    const tr = document.createElement('tr');
-                    headers.forEach(header => {
-                        const td = document.createElement('td');
-                        td.innerText = row[header] !== null ? row[header] : '';
-                        tr.appendChild(td);
-                    });
-                    tbody.appendChild(tr);
-                });
-            })
-            .catch(error => {
-                document.getElementById('loading').innerText = 'Error al cargar los datos de auditorías.';
-                console.error('Error:', error);
+    <!-- Tabla -->
+    <div class="table-section">
+        <div class="table-header-title">Detalle de Registros de Auditoría</div>
+        <div id="loading">Cargando datos del dashboard...</div>
+        <div class="table-wrapper">
+            <table id="auditTable" style="display:none;">
+                <thead>
+                    <tr id="tableHeader"></tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    let rawData = [];
+
+    fetch('data.json')
+        .then(response => response.json())
+        .then(data => {
+            rawData = data;
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('auditTable').style.display = 'table';
+            
+            populateDropdowns(data);
+            applyFilters();
+        })
+        .catch(err => {
+            document.getElementById('loading').innerText = 'Error al cargar los datos de auditorías.';
+            console.error(err);
+        });
+
+    function populateDropdowns(data) {
+        const auditorSelect = document.getElementById('filterAuditor');
+        const procesoSelect = document.getElementById('filterProceso');
+
+        const auditores = [...new Set(data.map(item => item.USUARIO).filter(Boolean))].sort();
+        const procesos = [...new Set(data.map(item => item.PROCESO).filter(Boolean))].sort();
+
+        auditores.forEach(auditor => {
+            const opt = document.createElement('option');
+            opt.value = auditor;
+            opt.textContent = auditor;
+            auditorSelect.appendChild(opt);
+        });
+
+        procesos.forEach(proceso => {
+            const opt = document.createElement('option');
+            opt.value = proceso;
+            opt.textContent = proceso;
+            procesoSelect.appendChild(opt);
+        });
+    }
+
+    function applyFilters() {
+        const selectedAuditor = document.getElementById('filterAuditor').value;
+        const selectedProceso = document.getElementById('filterProceso').value;
+        const selectedFecha = document.getElementById('filterFecha').value;
+
+        const filtered = rawData.filter(item => {
+            const matchAuditor = !selectedAuditor || item.USUARIO === selectedAuditor;
+            const matchProceso = !selectedProceso || item.PROCESO === selectedProceso;
+            
+            let matchFecha = true;
+            if (selectedFecha && item.FECHA_HORA) {
+                matchFecha = item.FECHA_HORA.startsWith(selectedFecha);
+            }
+
+            return matchAuditor && matchProceso && matchFecha;
+        });
+
+        renderTable(filtered);
+        updateKPIs(filtered);
+    }
+
+    function renderTable(data) {
+        const headerTr = document.getElementById('tableHeader');
+        const tbody = document.getElementById('tableBody');
+
+        headerTr.innerHTML = '';
+        tbody.innerHTML = '';
+
+        if (data.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:20px;">No se encontraron registros con los filtros seleccionados.</td></tr>';
+            return;
+        }
+
+        const headers = Object.keys(data[0]);
+        headers.forEach(header => {
+            const th = document.createElement('th');
+            th.innerText = header;
+            headerTr.appendChild(th);
+        });
+
+        data.slice(0, 500).forEach(row => {
+            const tr = document.createElement('tr');
+            headers.forEach(header => {
+                const td = document.createElement('td');
+                td.innerText = row[header] !== null ? row[header] : '';
+                tr.appendChild(td);
             });
-    </script>
+            tbody.appendChild(tr);
+        });
+    }
+
+    function updateKPIs(data) {
+        document.getElementById('kpiTotal').innerText = data.length.toLocaleString();
+        
+        const uniqueAuditores = new Set(data.map(item => item.USUARIO).filter(Boolean)).size;
+        document.getElementById('kpiAuditores').innerText = uniqueAuditores;
+
+        const uniqueProcesos = new Set(data.map(item => item.PROCESO).filter(Boolean)).size;
+        document.getElementById('kpiProcesos').innerText = uniqueProcesos;
+    }
+
+    function resetFilters() {
+        document.getElementById('filterAuditor').value = '';
+        document.getElementById('filterProceso').value = '';
+        document.getElementById('filterFecha').value = '';
+        applyFilters();
+    }
+</script>
+
 </body>
 </html>
