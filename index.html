@@ -26,7 +26,6 @@
             margin: 0 auto;
         }
 
-        /* Banner estilo MeLi PI */
         .header-banner {
             background-color: var(--brand-blue);
             color: white;
@@ -53,7 +52,6 @@
             display: block;
         }
 
-        /* Sección de Filtros */
         .filters-section {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -89,7 +87,6 @@
             color-scheme: dark;
         }
 
-        /* Tarjetas KPI */
         .kpi-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -118,7 +115,6 @@
             color: var(--brand-blue);
         }
 
-        /* Contenedor de Tabla */
         .table-section {
             background: var(--card-bg);
             border-radius: 6px;
@@ -136,7 +132,7 @@
         }
 
         .table-wrapper {
-            max-height: 500px;
+            max-height: 550px;
             overflow-y: auto;
         }
 
@@ -178,7 +174,6 @@
 <body>
 
 <div class="container">
-    <!-- Header -->
     <div class="header-banner">
         <div>
             <h1>Auditoría MXNL01</h1>
@@ -186,10 +181,10 @@
         </div>
     </div>
 
-    <!-- Filtros Interactivos -->
+    <!-- Filtros -->
     <div class="filters-section">
         <div class="filter-group">
-            <label for="filterAuditor">Auditor (Usuario)</label>
+            <label for="filterAuditor">Auditor (Nombre)</label>
             <select id="filterAuditor" onchange="applyFilters()">
                 <option value="">Todos los Auditores</option>
             </select>
@@ -247,6 +242,25 @@
 <script>
     let rawData = [];
 
+    // Mapeo de Correos/IDs a Nombres Reales
+    const auditorNamesMap = {
+        'araceli.chavira@mercadolibre.com.mx': 'Araceli Chavira',
+        'angelica.garcia@mercadolibre.com.mx': 'Angelica Garcia',
+        'adonnay.ramirez@mercadolibre.com.mx': 'Adonnay Ramirez',
+        'alejandra.torres@mercadolibre.com.mx': 'Alejandra Torres',
+        'montserrat.covarrubias@mercadolibre.com.mx': 'Montserrat Covarrubias',
+        'irene.ghigliazza@mercadolibre.com.mx': 'Irene Ghigliazza',
+        'brenda.lira@mercadolibre.com.mx': 'Brenda Lira',
+        'blanca.martinezblanco@mercadolibre.com.mx': 'Blanca Esther',
+        'andy.alois@mercadolibre.com.mx': 'Andy Alois'
+    };
+
+    function getAuditorName(userValue) {
+        if (!userValue) return 'Desconocido';
+        const cleanUser = userValue.toLowerCase().trim();
+        return auditorNamesMap[cleanUser] || userValue;
+    }
+
     fetch('data.json')
         .then(response => response.json())
         .then(data => {
@@ -266,7 +280,16 @@
         const auditorSelect = document.getElementById('filterAuditor');
         const procesoSelect = document.getElementById('filterProceso');
 
-        const auditores = [...new Set(data.map(item => item.USUARIO).filter(Boolean))].sort();
+        // Extraer auditores únicos mapeando sus nombres
+        const auditoresSet = new Set();
+        data.forEach(item => {
+            if (item.USUARIO) {
+                auditoresSet.add(getAuditorName(item.USUARIO));
+            }
+        });
+        const auditores = Array.from(auditoresSet).sort();
+
+        // Extraer TODOS los procesos dinámicamente del query
         const procesos = [...new Set(data.map(item => item.PROCESO).filter(Boolean))].sort();
 
         auditores.forEach(auditor => {
@@ -290,7 +313,8 @@
         const selectedFecha = document.getElementById('filterFecha').value;
 
         const filtered = rawData.filter(item => {
-            const matchAuditor = !selectedAuditor || item.USUARIO === selectedAuditor;
+            const itemAuditorName = getAuditorName(item.USUARIO);
+            const matchAuditor = !selectedAuditor || itemAuditorName === selectedAuditor;
             const matchProceso = !selectedProceso || item.PROCESO === selectedProceso;
             
             let matchFecha = true;
@@ -320,15 +344,23 @@
         const headers = Object.keys(data[0]);
         headers.forEach(header => {
             const th = document.createElement('th');
-            th.innerText = header;
+            th.innerText = header === 'USUARIO' ? 'AUDITOR' : header;
             headerTr.appendChild(th);
         });
 
-        data.slice(0, 500).forEach(row => {
+        // Muestra hasta 2000 filas de resultado filtrado para mantener alta velocidad
+        data.slice(0, 2000).forEach(row => {
             const tr = document.createElement('tr');
             headers.forEach(header => {
                 const td = document.createElement('td');
-                td.innerText = row[header] !== null ? row[header] : '';
+                let cellValue = row[header] !== null ? row[header] : '';
+                
+                // Si la columna es USUARIO, mostramos el Nombre Completo
+                if (header === 'USUARIO') {
+                    cellValue = getAuditorName(cellValue);
+                }
+
+                td.innerText = cellValue;
                 tr.appendChild(td);
             });
             tbody.appendChild(tr);
@@ -338,7 +370,7 @@
     function updateKPIs(data) {
         document.getElementById('kpiTotal').innerText = data.length.toLocaleString();
         
-        const uniqueAuditores = new Set(data.map(item => item.USUARIO).filter(Boolean)).size;
+        const uniqueAuditores = new Set(data.map(item => getAuditorName(item.USUARIO)).filter(Boolean)).size;
         document.getElementById('kpiAuditores').innerText = uniqueAuditores;
 
         const uniqueProcesos = new Set(data.map(item => item.PROCESO).filter(Boolean)).size;
