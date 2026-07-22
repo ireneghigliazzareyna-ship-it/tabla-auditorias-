@@ -35,18 +35,18 @@
 
     <div class="filters">
         <div class="filter-group">
-            <label>AUDITOR (NOMBRE)</label>
-            <select id="filtro-auditor">
+            <label>AUDITOR (CORREO)</label>
+            <select id="filtro-auditor" onchange="aplicarFiltros()">
                 <option value="">Todos los Auditores</option>
             </select>
         </div>
         <div class="filter-group">
             <label>PROCESO</label>
-            <select id="filtro-proceso">
+            <select id="filtro-proceso" onchange="aplicarFiltros()">
                 <option value="">Todos los Procesos</option>
             </select>
         </div>
-        <button class="btn-clear" onclick="location.reload()">Limpiar Filtros</button>
+        <button class="btn-clear" onclick="limpiarFiltros()">Limpiar Filtros</button>
     </div>
 
     <div class="kpi-container">
@@ -81,28 +81,76 @@
     </div>
 
     <script>
+        let datosGlobales = []; // Guardará los datos cargados desde la consulta
+
+        // Función invocada al recibir datos de BigQuery / Verdi
         function procesarDatosDashboard(datosRaw) {
             if (!datosRaw || !Array.isArray(datosRaw)) return;
-            renderTabla(datosRaw);
-            poblarFiltros(datosRaw);
-            actualizarKpis(datosRaw);
+            
+            datosGlobales = datosRaw;
+
+            // Poblamos desplegables por primera vez
+            poblarFiltros(datosGlobales);
+            
+            // Renderizamos tabla y KPIs
+            aplicarFiltros();
+        }
+
+        function aplicarFiltros() {
+            const auditorSeleccionado = document.getElementById('filtro-auditor').value;
+            const procesoSeleccionado = document.getElementById('filtro-proceso').value;
+
+            // Filtrado dinámico
+            const datosFiltrados = datosGlobales.filter(row => {
+                const aud = row.AUDITOR || row.auditor || '';
+                const proc = row.PROCESO || row.proceso || '';
+
+                const cumpleAuditor = !auditorSeleccionado || aud === auditorSeleccionado;
+                const cumpleProceso = !procesoSeleccionado || proc === procesoSeleccionado;
+
+                return cumpleAuditor && cumpleProceso;
+            });
+
+            renderTabla(datosFiltrados);
+            actualizarKpis(datosFiltrados);
         }
 
         function renderTabla(datos) {
             const tbody = document.getElementById('grid-body');
             if (!tbody) return;
             tbody.innerHTML = '';
+
             datos.forEach(row => {
-                const auditor = row.AUDITOR || row.auditor || 'N/A';
+                const auditor = row.AUDITOR || row.auditor || '-';
                 const proceso = row.PROCESO || row.proceso || '-';
                 const idTransaccion = row.ID || row.id || '-';
-                let fecha = '-';
+                
+                // Formato legible para la fecha y el día
+                let fechaFormateada = '-';
                 if (row.FECHA_HORA) {
-                    const f = row.FECHA_HORA.value || row.FECHA_HORA;
-                    fecha = new Date(f).toLocaleString();
+                    const rawFecha = row.FECHA_HORA.value || row.FECHA_HORA;
+                    const d = new Date(rawFecha);
+                    if (!isNaN(d.getTime())) {
+                        fechaFormateada = d.toLocaleString('es-MX', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit',
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit' 
+                        });
+                    } else {
+                        fechaFormateada = rawFecha;
+                    }
                 }
+
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${fecha}</td><td>${proceso}</td><td>${auditor}</td><td>${idTransaccion}</td>`;
+                tr.innerHTML = `
+                    <td>${fechaFormateada}</td>
+                    <td>${proceso}</td>
+                    <td>${auditor}</td>
+                    <td>${idTransaccion}</td>
+                `;
                 tbody.appendChild(tr);
             });
         }
@@ -110,6 +158,8 @@
         function poblarFiltros(datos) {
             const selectAuditor = document.getElementById('filtro-auditor');
             const selectProceso = document.getElementById('filtro-proceso');
+
+            // Extrae correos y procesos sin duplicados
             const auditoresUnicos = [...new Set(datos.map(d => d.AUDITOR || d.auditor).filter(Boolean))].sort();
             const procesosUnicos = [...new Set(datos.map(d => d.PROCESO || d.proceso).filter(Boolean))].sort();
 
@@ -122,6 +172,7 @@
                     selectAuditor.appendChild(opt);
                 });
             }
+
             if (selectProceso) {
                 selectProceso.innerHTML = '<option value="">Todos los Procesos</option>';
                 procesosUnicos.forEach(proc => {
@@ -137,9 +188,16 @@
             const elemTotal = document.getElementById('kpi-total');
             const elemAuditores = document.getElementById('kpi-auditores');
             const elemProcesos = document.getElementById('kpi-procesos');
+
             if (elemTotal) elemTotal.innerText = datos.length;
             if (elemAuditores) elemAuditores.innerText = new Set(datos.map(d => d.AUDITOR || d.auditor).filter(Boolean)).size;
             if (elemProcesos) elemProcesos.innerText = new Set(datos.map(d => d.PROCESO || d.proceso).filter(Boolean)).size;
+        }
+
+        function limpiarFiltros() {
+            document.getElementById('filtro-auditor').value = '';
+            document.getElementById('filtro-proceso').value = '';
+            aplicarFiltros();
         }
     </script>
 </body>
