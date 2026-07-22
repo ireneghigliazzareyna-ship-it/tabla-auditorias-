@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Auditorías MXNL01</title>
+    <!-- Estilos limpios y modernos -->
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
+        h1 { color: #2c3e50; }
+        .stats { margin-bottom: 20px; font-weight: bold; }
+        table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background-color: #34495e; color: white; }
+        tr:hover { background-color: #f1f1f1; }
+        #loading { font-size: 1.2em; color: #666; }
+    </style>
+</head>
+<body>
+
+    <h1>Auditorías MXNL01</h1>
+    <div class="stats" id="stats">Cargando registros...</div>
+
+    <div id="loading">Cargando datos desde GitHub...</div>
+
+    <table id="auditTable" style="display:none;">
+        <thead>
+            <tr id="tableHeader"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
+
+    <script>
+        // Consume el archivo data.json cargado por n8n
+        fetch('data.json')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('auditTable').style.display = 'table';
+                document.getElementById('stats').innerText = `Total de registros: ${data.length}`;
+
+                if (data.length === 0) return;
+
+                // Generar encabezados automáticamente según las llaves de los objetos
+                const headers = Object.keys(data[0]);
+                const headerTr = document.getElementById('tableHeader');
+                headers.forEach(header => {
+                    const th = document.createElement('th');
+                    th.innerText = header;
+                    headerTr.appendChild(th);
+                });
+
+                // Llenar filas (limitado a las primeras 1000 para fluidez en navegador)
+                const tbody = document.getElementById('tableBody');
+                data.slice(0, 1000).forEach(row => {
+                    const tr = document.createElement('tr');
+                    headers.forEach(header => {
+                        const td = document.createElement('td');
+                        td.innerText = row[header] !== null ? row[header] : '';
+                        tr.appendChild(td);
+                    });
+                    tbody.appendChild(tr);
+                });
+            })
+            .catch(error => {
+                document.getElementById('loading').innerText = 'Error al cargar los datos de auditorías.';
+                console.error('Error:', error);
+            });
+    </script>
+</body>
+</html>
