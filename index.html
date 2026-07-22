@@ -94,18 +94,22 @@
     <script>
         let datosGlobales = [];
 
-        // Esta función debe llamarse al recibir los datos de Verdi / BigQuery
-        function procesarDatosDashboard(datosRaw) {
-            if (!datosRaw || !Array.isArray(datosRaw)) return;
-            
-            datosGlobales = datosRaw;
-
-            // 1. Llenar los menús desplegables con todos los auditores y procesos reales
-            poblarFiltros(datosGlobales);
-            
-            // 2. Dibujar la tabla y los KPIs
-            aplicarFiltros();
-        }
+        // 1. CARGA AUTOMÁTICA DEL ARCHIVO data.json QUE GENERA VERDI
+        document.addEventListener("DOMContentLoaded", () => {
+            fetch('./data.json')
+                .then(response => {
+                    if (!response.ok) throw new Error("No se pudo leer data.json");
+                    return response.json();
+                })
+                .then(data => {
+                    datosGlobales = data;
+                    poblarFiltros(datosGlobales);
+                    aplicarFiltros();
+                })
+                .catch(err => {
+                    console.error("Error al cargar data.json:", err);
+                });
+        });
 
         function aplicarFiltros() {
             const auditorSeleccionado = document.getElementById('filtro-auditor').value;
@@ -117,11 +121,9 @@
                 const aud = row.AUDITOR || row.auditor || '';
                 const proc = row.PROCESO || row.proceso || '';
                 
-                // Fecha del registro
                 const rawFecha = row.FECHA_HORA ? (row.FECHA_HORA.value || row.FECHA_HORA) : null;
                 const fechaObj = rawFecha ? new Date(rawFecha) : null;
 
-                // Validación de filtros
                 const cumpleAuditor = !auditorSeleccionado || aud === auditorSeleccionado;
                 const cumpleProceso = !procesoSeleccionado || proc === procesoSeleccionado;
                 
