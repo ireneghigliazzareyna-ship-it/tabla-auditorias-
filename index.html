@@ -3,66 +3,286 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Auditorías MXNL01</title>
+    <title>Auditoría TMWH - PI (MXNL01)</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
-        h2 { color: #333; }
-        table { width: 100%; border-collapse: collapse; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #2e7d32; color: white; }
-        tr:hover { background-color: #f1f1f1; }
-        #status { font-weight: bold; margin-bottom: 15px; }
+        :root {
+            --primary-blue: #2c387e;
+            --accent-yellow: #ffc107;
+            --bg-gray: #f0f2f5;
+            --card-bg: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-gray);
+            color: #333;
+        }
+
+        /* Banner Principal Estilo Looker */
+        .header-banner {
+            background-color: var(--primary-blue);
+            color: white;
+            padding: 20px 25px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .header-banner h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .header-banner .subtitle {
+            color: var(--accent-yellow);
+            font-weight: bold;
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        /* Contenedor de Filtros */
+        .filter-panel {
+            background: var(--card-bg);
+            padding: 18px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .filter-group label {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--primary-blue);
+            text-transform: uppercase;
+        }
+
+        .filter-group input, .filter-group select {
+            padding: 9px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            background-color: #fcfcfc;
+            outline: none;
+        }
+
+        .filter-group input:focus, .filter-group select:focus {
+            border-color: var(--primary-blue);
+            background-color: #fff;
+        }
+
+        /* Tarjeta de Métricas */
+        .kpi-card {
+            background: var(--primary-blue);
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+
+        .kpi-card .number {
+            font-size: 28px;
+            font-weight: bold;
+            color: var(--accent-yellow);
+        }
+
+        .kpi-card .label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tabla Estilizada */
+        .table-container {
+            background: var(--card-bg);
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            overflow: hidden;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: var(--primary-blue);
+            color: white;
+            position: sticky;
+            top: 0;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px 15px;
+            border-bottom: 1px solid #eef2f5;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        tr:hover {
+            background-color: #eef3fb;
+        }
+
+        #status {
+            text-align: center;
+            padding: 20px;
+            font-weight: bold;
+            color: #666;
+        }
     </style>
 </head>
 <body>
 
-    <h2>Auditorías - Site MXNL01</h2>
-    <div id="status">Cargando datos...</div>
+    <!-- Encabezado Estilo Looker Studio -->
+    <div class="header-banner">
+        <h1>Auditoría TMWH</h1>
+        <div class="subtitle">PI - PROCESS IMPROVEMENT | SITE MXNL01</div>
+    </div>
 
-    <table id="tabla" style="display:none;">
-        <thead>
-            <tr>
-                <th>Fecha / Hora</th>
-                <th>Proceso</th>
-                <th>Auditor</th>
-                <th>ID</th>
-            </tr>
-        </thead>
-        <tbody id="contenido"></tbody>
-    </table>
+    <!-- Filtros de Navegación y Fecha -->
+    <div class="filter-panel">
+        <div class="filter-group">
+            <label>Fecha Inicio</label>
+            <input type="date" id="fecha-inicio" onchange="filtrarDatos()">
+        </div>
+        <div class="filter-group">
+            <label>Fecha Fin</label>
+            <input type="date" id="fecha-fin" onchange="filtrarDatos()">
+        </div>
+        <div class="filter-group">
+            <label>Auditor</label>
+            <select id="select-auditor" onchange="filtrarDatos()">
+                <option value="">Todos los auditores</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Proceso</label>
+            <select id="select-proceso" onchange="filtrarDatos()">
+                <option value="">Todos los procesos</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Búsqueda General</label>
+            <input type="text" id="search" placeholder="Buscar ID o texto..." oninput="filtrarDatos()">
+        </div>
+    </div>
+
+    <!-- Métrica Principal -->
+    <div class="kpi-card">
+        <div class="number" id="total-registros">0</div>
+        <div class="label">Total de Auditorías Encontradas</div>
+    </div>
+
+    <!-- Tabla de Resultados -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha / Hora</th>
+                    <th>Proceso</th>
+                    <th>Auditor</th>
+                    <th>ID</th>
+                </tr>
+            </thead>
+            <tbody id="contenido"></tbody>
+        </table>
+        <div id="status">Cargando datos...</div>
+    </div>
 
     <script>
+        let datosOriginales = [];
+
         fetch('data.json?v=' + new Date().getTime())
-            .then(response => {
-                if (!response.ok) throw new Error("No se pudo cargar data.json");
-                return response.json();
-            })
+            .then(res => res.json())
             .then(data => {
-                const statusDiv = document.getElementById('status');
-                const tbody = document.getElementById('contenido');
+                datosOriginales = data;
+                document.getElementById('status').style.display = 'none';
                 
-                if (!data || data.length === 0) {
-                    statusDiv.innerText = "No se encontraron registros para MXNL01.";
-                    return;
-                }
-
-                statusDiv.innerText = `Total de registros cargados: ${data.length}`;
-                document.getElementById('tabla').style.display = 'table';
-
-                let html = '';
-                data.forEach(item => {
-                    html += `<tr>
-                        <td>${item.FECHA_HORA || ''}</td>
-                        <td>${item.PROCESO || ''}</td>
-                        <td>${item.AUDITOR || ''}</td>
-                        <td>${item.ID || ''}</td>
-                    </tr>`;
-                });
-                tbody.innerHTML = html;
+                poblarFiltros(data);
+                renderTabla(data);
             })
-            .catch(error => {
-                document.getElementById('status').innerText = "Error al cargar la información: " + error.message;
+            .catch(err => {
+                document.getElementById('status').innerText = 'Error al cargar datos: ' + err.message;
             });
+
+        function renderTabla(lista) {
+            const tbody = document.getElementById('contenido');
+            document.getElementById('total-registros').innerText = lista.length.toLocaleString();
+            
+            if (lista.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">No se encontraron registros para los filtros seleccionados</td></tr>';
+                return;
+            }
+
+            let html = '';
+            lista.forEach(item => {
+                html += `<tr>
+                    <td>${item.FECHA_HORA || ''}</td>
+                    <td><strong>${item.PROCESO || ''}</strong></td>
+                    <td>${item.AUDITOR || ''}</td>
+                    <td><code>${item.ID || ''}</code></td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function poblarFiltros(data) {
+            const auditores = [...new Set(data.map(d => d.AUDITOR).filter(Boolean))].sort();
+            const procesos = [...new Set(data.map(d => d.PROCESO).filter(Boolean))].sort();
+
+            const selectAuditor = document.getElementById('select-auditor');
+            auditores.forEach(a => selectAuditor.add(new Option(a, a)));
+
+            const selectProceso = document.getElementById('select-proceso');
+            procesos.forEach(p => selectProceso.add(new Option(p, p)));
+        }
+
+        function filtrarDatos() {
+            const fechaInicio = document.getElementById('fecha-inicio').value;
+            const fechaFin = document.getElementById('fecha-fin').value;
+            const auditor = document.getElementById('select-auditor').value;
+            const proceso = document.getElementById('select-proceso').value;
+            const texto = document.getElementById('search').value.toLowerCase();
+
+            const filtrados = datosOriginales.filter(d => {
+                // Filtro por Fecha (extrae YYYY-MM-DD del campo FECHA_HORA)
+                let fechaItem = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
+                const coincideFechaInicio = !fechaInicio || fechaItem >= fechaInicio;
+                const coincideFechaFin = !fechaFin || fechaItem <= fechaFin;
+
+                // Filtros de Selección y Búsqueda
+                const coincideAuditor = !auditor || d.AUDITOR === auditor;
+                const coincideProceso = !proceso || d.PROCESO === proceso;
+                const coincideTexto = !texto || Object.values(d).some(v => String(v).toLowerCase().includes(texto));
+
+                return coincideFechaInicio && coincideFechaFin && coincideAuditor && coincideProceso && coincideTexto;
+            });
+
+            renderTabla(filtrados);
+        }
     </script>
 </body>
 </html>
