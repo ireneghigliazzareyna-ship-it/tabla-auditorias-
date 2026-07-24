@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auditoría TMWH - PI (MXNL01)</title>
+    <!-- Chart.js para los gráficos estilo Looker Studio -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary-blue: #2c387e;
@@ -20,7 +22,7 @@
             color: #333;
         }
 
-        /* Banner Principal Estilo Looker */
+        /* Banner Principal */
         .header-banner {
             background-color: var(--primary-blue);
             color: white;
@@ -84,36 +86,75 @@
             background-color: #fff;
         }
 
-        /* Tarjeta de Métricas */
+        /* Layout Grid para KPIs y Gráficos */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 240px 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 992px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .kpi-card {
             background: var(--primary-blue);
             color: white;
-            padding: 15px;
+            padding: 20px;
             border-radius: 6px;
             text-align: center;
-            margin-bottom: 20px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
         }
 
         .kpi-card .number {
-            font-size: 28px;
+            font-size: 38px;
             font-weight: bold;
             color: var(--accent-yellow);
         }
 
         .kpi-card .label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 5px;
+        }
+
+        .chart-card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            height: 240px;
+        }
+
+        .chart-card h3 {
+            margin: 0 0 10px 0;
             font-size: 12px;
+            color: var(--primary-blue);
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        /* Tabla Estilizada */
+        .chart-container {
+            position: relative;
+            height: 190px;
+            width: 100%;
+        }
+
+        /* Tabla de Resultados */
         .table-container {
             background: var(--card-bg);
             border-radius: 6px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
             overflow: hidden;
-            max-height: 60vh;
+            max-height: 50vh;
             overflow-y: auto;
         }
 
@@ -131,6 +172,7 @@
             padding: 12px 15px;
             text-align: left;
             font-weight: 600;
+            z-index: 1;
         }
 
         td {
@@ -156,13 +198,13 @@
 </head>
 <body>
 
-    <!-- Encabezado Estilo Looker Studio -->
+    <!-- Encabezado -->
     <div class="header-banner">
         <h1>Auditoría TMWH</h1>
         <div class="subtitle">PI - PROCESS IMPROVEMENT | SITE MXNL01</div>
     </div>
 
-    <!-- Filtros de Navegación y Fecha -->
+    <!-- Panel de Filtros -->
     <div class="filter-panel">
         <div class="filter-group">
             <label>Fecha Inicio</label>
@@ -190,13 +232,27 @@
         </div>
     </div>
 
-    <!-- Métrica Principal -->
-    <div class="kpi-card">
-        <div class="number" id="total-registros">0</div>
-        <div class="label">Total de Auditorías Encontradas</div>
+    <!-- Grid de Métricas y Métricas Visuales -->
+    <div class="dashboard-grid">
+        <div class="kpi-card">
+            <div class="number" id="total-registros">0</div>
+            <div class="label">Total Auditorías Encontradas</div>
+        </div>
+        <div class="chart-card">
+            <h3>Volumen por Día</h3>
+            <div class="chart-container">
+                <canvas id="chartFechas"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3>Top Auditores</h3>
+            <div class="chart-container">
+                <canvas id="chartAuditores"></canvas>
+            </div>
+        </div>
     </div>
 
-    <!-- Tabla de Resultados -->
+    <!-- Tabla -->
     <div class="table-container">
         <table>
             <thead>
@@ -214,6 +270,23 @@
 
     <script>
         let datosOriginales = [];
+        let chartFechasInstance = null;
+        let chartAuditoresInstance = null;
+
+        // Helpers para compatibilidad de llaves (SQL / JSON)
+        function getAuditor(item) {
+            return item.AUDITOR || item.USUARIO || 'Desconocido';
+        }
+
+        function getId(item) {
+            return item.ID || item.ID_TRANSACCION || '';
+        }
+
+        function formatearFechaHora(str) {
+            if (!str) return '';
+            // Limpia el formato de BigQuery como '2026-07-23 17:27:29+00' o '2026-07-23T17:27:29...'
+            return str.replace('T', ' ').split('+')[0].split('.')[0];
+        }
 
         fetch('data.json?v=' + new Date().getTime())
             .then(res => res.json())
@@ -222,7 +295,7 @@
                 document.getElementById('status').style.display = 'none';
                 
                 poblarFiltros(data);
-                renderTabla(data);
+                filtrarDatos();
             })
             .catch(err => {
                 document.getElementById('status').innerText = 'Error al cargar datos: ' + err.message;
@@ -233,24 +306,28 @@
             document.getElementById('total-registros').innerText = lista.length.toLocaleString();
             
             if (lista.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">No se encontraron registros para los filtros seleccionados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">No se encontraron registros</td></tr>';
                 return;
             }
 
             let html = '';
             lista.forEach(item => {
+                const auditor = getAuditor(item);
+                const idVal = getId(item);
+                const fechaLimpia = formatearFechaHora(item.FECHA_HORA);
+                
                 html += `<tr>
-                    <td>${item.FECHA_HORA || ''}</td>
+                    <td>${fechaLimpia}</td>
                     <td><strong>${item.PROCESO || ''}</strong></td>
-                    <td>${item.AUDITOR || ''}</td>
-                    <td><code>${item.ID || ''}</code></td>
+                    <td>${auditor}</td>
+                    <td><code>${idVal}</code></td>
                 </tr>`;
             });
             tbody.innerHTML = html;
         }
 
         function poblarFiltros(data) {
-            const auditores = [...new Set(data.map(d => d.AUDITOR).filter(Boolean))].sort();
+            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
             const procesos = [...new Set(data.map(d => d.PROCESO).filter(Boolean))].sort();
 
             const selectAuditor = document.getElementById('select-auditor');
@@ -258,6 +335,75 @@
 
             const selectProceso = document.getElementById('select-proceso');
             procesos.forEach(p => selectProceso.add(new Option(p, p)));
+        }
+
+        function renderGraficos(lista) {
+            // 1. Agrupar por Fecha (Día)
+            const conteoFechas = {};
+            lista.forEach(item => {
+                let fecha = item.FECHA_HORA ? item.FECHA_HORA.substring(0, 10) : 'Sin fecha';
+                conteoFechas[fecha] = (conteoFechas[fecha] || 0) + 1;
+            });
+
+            const fechasSorted = Object.keys(conteoFechas).sort();
+            const fechasData = fechasSorted.map(f => conteoFechas[f]);
+
+            // 2. Agrupar por Auditor (Top 5)
+            const conteoAuditores = {};
+            lista.forEach(item => {
+                let auditor = getAuditor(item);
+                if (auditor.includes('@')) auditor = auditor.split('@')[0]; // Corta el correo para mejor vista
+                conteoAuditores[auditor] = (conteoAuditores[auditor] || 0) + 1;
+            });
+
+            const auditoresSorted = Object.keys(conteoAuditores).sort((a,b) => conteoAuditores[b] - conteoAuditores[a]).slice(0, 5);
+            const auditoresData = auditoresSorted.map(a => conteoAuditores[a]);
+
+            // Gráfico 1: Tendencia por Día
+            const ctxFechas = document.getElementById('chartFechas').getContext('2d');
+            if (chartFechasInstance) chartFechasInstance.destroy();
+            chartFechasInstance = new Chart(ctxFechas, {
+                type: 'line',
+                data: {
+                    labels: fechasSorted,
+                    datasets: [{
+                        label: 'Auditorías',
+                        data: fechasData,
+                        borderColor: '#2c387e',
+                        backgroundColor: 'rgba(44, 56, 126, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // Gráfico 2: Top Auditores
+            const ctxAuditores = document.getElementById('chartAuditores').getContext('2d');
+            if (chartAuditoresInstance) chartAuditoresInstance.destroy();
+            chartAuditoresInstance = new Chart(ctxAuditores, {
+                type: 'bar',
+                data: {
+                    labels: auditoresSorted,
+                    datasets: [{
+                        label: 'Auditorías',
+                        data: auditoresData,
+                        backgroundColor: '#ffc107',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
         }
 
         function filtrarDatos() {
@@ -268,13 +414,12 @@
             const texto = document.getElementById('search').value.toLowerCase();
 
             const filtrados = datosOriginales.filter(d => {
-                // Filtro por Fecha (extrae YYYY-MM-DD del campo FECHA_HORA)
                 let fechaItem = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
                 const coincideFechaInicio = !fechaInicio || fechaItem >= fechaInicio;
                 const coincideFechaFin = !fechaFin || fechaItem <= fechaFin;
 
-                // Filtros de Selección y Búsqueda
-                const coincideAuditor = !auditor || d.AUDITOR === auditor;
+                const auditorItem = getAuditor(d);
+                const coincideAuditor = !auditor || auditorItem === auditor;
                 const coincideProceso = !proceso || d.PROCESO === proceso;
                 const coincideTexto = !texto || Object.values(d).some(v => String(v).toLowerCase().includes(texto));
 
@@ -282,6 +427,7 @@
             });
 
             renderTabla(filtrados);
+            renderGraficos(filtrados);
         }
     </script>
 </body>
