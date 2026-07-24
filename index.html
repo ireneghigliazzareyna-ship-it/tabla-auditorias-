@@ -86,7 +86,7 @@
             background-color: #fff;
         }
 
-        /* Layout Grid para KPIs y Gráficos */
+        /* Dashboard Grid */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 240px 1fr 1fr;
@@ -232,7 +232,7 @@
         </div>
     </div>
 
-    <!-- Grid de Métricas y Métricas Visuales -->
+    <!-- Dashboard -->
     <div class="dashboard-grid">
         <div class="kpi-card">
             <div class="number" id="total-registros">0</div>
@@ -273,9 +273,13 @@
         let chartFechasInstance = null;
         let chartAuditoresInstance = null;
 
-        // Helpers para compatibilidad de llaves (SQL / JSON)
+        // Lectura adaptable de campos
         function getAuditor(item) {
-            return item.AUDITOR || item.USUARIO || 'Desconocido';
+            return (item.AUDITOR || item.USUARIO || 'Desconocido').trim();
+        }
+
+        function getProceso(item) {
+            return (item.PROCESO || item.proceso || 'Sin Proceso').trim();
         }
 
         function getId(item) {
@@ -284,7 +288,6 @@
 
         function formatearFechaHora(str) {
             if (!str) return '';
-            // Limpia el formato de BigQuery como '2026-07-23 17:27:29+00' o '2026-07-23T17:27:29...'
             return str.replace('T', ' ').split('+')[0].split('.')[0];
         }
 
@@ -313,12 +316,13 @@
             let html = '';
             lista.forEach(item => {
                 const auditor = getAuditor(item);
+                const proceso = getProceso(item);
                 const idVal = getId(item);
                 const fechaLimpia = formatearFechaHora(item.FECHA_HORA);
                 
                 html += `<tr>
                     <td>${fechaLimpia}</td>
-                    <td><strong>${item.PROCESO || ''}</strong></td>
+                    <td><strong>${proceso}</strong></td>
                     <td>${auditor}</td>
                     <td><code>${idVal}</code></td>
                 </tr>`;
@@ -327,18 +331,20 @@
         }
 
         function poblarFiltros(data) {
+            // Extrae y limpia auditores y procesos de TODOS los registros
             const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
-            const procesos = [...new Set(data.map(d => d.PROCESO).filter(Boolean))].sort();
+            const procesos = [...new Set(data.map(d => getProceso(d)).filter(Boolean))].sort();
 
             const selectAuditor = document.getElementById('select-auditor');
+            selectAuditor.innerHTML = '<option value="">Todos los auditores</option>';
             auditores.forEach(a => selectAuditor.add(new Option(a, a)));
 
             const selectProceso = document.getElementById('select-proceso');
+            selectProceso.innerHTML = '<option value="">Todos los procesos</option>';
             procesos.forEach(p => selectProceso.add(new Option(p, p)));
         }
 
         function renderGraficos(lista) {
-            // 1. Agrupar por Fecha (Día)
             const conteoFechas = {};
             lista.forEach(item => {
                 let fecha = item.FECHA_HORA ? item.FECHA_HORA.substring(0, 10) : 'Sin fecha';
@@ -348,18 +354,17 @@
             const fechasSorted = Object.keys(conteoFechas).sort();
             const fechasData = fechasSorted.map(f => conteoFechas[f]);
 
-            // 2. Agrupar por Auditor (Top 5)
             const conteoAuditores = {};
             lista.forEach(item => {
                 let auditor = getAuditor(item);
-                if (auditor.includes('@')) auditor = auditor.split('@')[0]; // Corta el correo para mejor vista
+                if (auditor.includes('@')) auditor = auditor.split('@')[0];
                 conteoAuditores[auditor] = (conteoAuditores[auditor] || 0) + 1;
             });
 
             const auditoresSorted = Object.keys(conteoAuditores).sort((a,b) => conteoAuditores[b] - conteoAuditores[a]).slice(0, 5);
             const auditoresData = auditoresSorted.map(a => conteoAuditores[a]);
 
-            // Gráfico 1: Tendencia por Día
+            // Gráfico 1: Fechas
             const ctxFechas = document.getElementById('chartFechas').getContext('2d');
             if (chartFechasInstance) chartFechasInstance.destroy();
             chartFechasInstance = new Chart(ctxFechas, {
@@ -383,7 +388,7 @@
                 }
             });
 
-            // Gráfico 2: Top Auditores
+            // Gráfico 2: Auditores
             const ctxAuditores = document.getElementById('chartAuditores').getContext('2d');
             if (chartAuditoresInstance) chartAuditoresInstance.destroy();
             chartAuditoresInstance = new Chart(ctxAuditores, {
@@ -419,8 +424,10 @@
                 const coincideFechaFin = !fechaFin || fechaItem <= fechaFin;
 
                 const auditorItem = getAuditor(d);
+                const procesoItem = getProceso(d);
+
                 const coincideAuditor = !auditor || auditorItem === auditor;
-                const coincideProceso = !proceso || d.PROCESO === proceso;
+                const coincideProceso = !proceso || procesoItem === proceso;
                 const coincideTexto = !texto || Object.values(d).some(v => String(v).toLowerCase().includes(texto));
 
                 return coincideFechaInicio && coincideFechaFin && coincideAuditor && coincideProceso && coincideTexto;
