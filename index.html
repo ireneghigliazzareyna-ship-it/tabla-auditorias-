@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Auditoría TMWH - PI (MXNL01)</title>
-    <!-- Chart.js para los gráficos estilo Looker Studio -->
+    <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -131,7 +131,7 @@
             padding: 15px;
             border-radius: 6px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            height: 240px;
+            height: 260px;
         }
 
         .chart-card h3 {
@@ -144,7 +144,7 @@
 
         .chart-container {
             position: relative;
-            height: 190px;
+            height: 210px;
             width: 100%;
         }
 
@@ -239,13 +239,13 @@
             <div class="label">Total Auditorías Encontradas</div>
         </div>
         <div class="chart-card">
-            <h3>Volumen por Día</h3>
+            <h3>Distribución por Hora del Día</h3>
             <div class="chart-container">
-                <canvas id="chartFechas"></canvas>
+                <canvas id="chartHoras"></canvas>
             </div>
         </div>
         <div class="chart-card">
-            <h3>Top Auditores</h3>
+            <h3>Productividad por Auditor (Todos)</h3>
             <div class="chart-container">
                 <canvas id="chartAuditores"></canvas>
             </div>
@@ -270,10 +270,9 @@
 
     <script>
         let datosOriginales = [];
-        let chartFechasInstance = null;
+        let chartHorasInstance = null;
         let chartAuditoresInstance = null;
 
-        // Lectura adaptable de campos
         function getAuditor(item) {
             return (item.AUDITOR || item.USUARIO || 'Desconocido').trim();
         }
@@ -331,7 +330,6 @@
         }
 
         function poblarFiltros(data) {
-            // Extrae y limpia auditores y procesos de TODOS los registros
             const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
             const procesos = [...new Set(data.map(d => getProceso(d)).filter(Boolean))].sort();
 
@@ -345,15 +343,24 @@
         }
 
         function renderGraficos(lista) {
-            const conteoFechas = {};
+            // 1. Agrupar por HORA del Día (00:00 a 23:00)
+            const conteoHoras = Array(24).fill(0);
             lista.forEach(item => {
-                let fecha = item.FECHA_HORA ? item.FECHA_HORA.substring(0, 10) : 'Sin fecha';
-                conteoFechas[fecha] = (conteoFechas[fecha] || 0) + 1;
+                if (item.FECHA_HORA) {
+                    const horaStr = item.FECHA_HORA.includes('T') ? 
+                        item.FECHA_HORA.split('T')[1] : item.FECHA_HORA.split(' ')[1];
+                    if (horaStr) {
+                        const hora = parseInt(horaStr.split(':')[0], 10);
+                        if (!isNaN(hora) && hora >= 0 && hora < 24) {
+                            conteoHoras[hora]++;
+                        }
+                    }
+                }
             });
 
-            const fechasSorted = Object.keys(conteoFechas).sort();
-            const fechasData = fechasSorted.map(f => conteoFechas[f]);
+            const horasLabels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
+            // 2. Agrupar por AUDITOR (TODOS, ordenados de mayor a menor)
             const conteoAuditores = {};
             lista.forEach(item => {
                 let auditor = getAuditor(item);
@@ -361,21 +368,21 @@
                 conteoAuditores[auditor] = (conteoAuditores[auditor] || 0) + 1;
             });
 
-            const auditoresSorted = Object.keys(conteoAuditores).sort((a,b) => conteoAuditores[b] - conteoAuditores[a]).slice(0, 5);
+            const auditoresSorted = Object.keys(conteoAuditores).sort((a,b) => conteoAuditores[b] - conteoAuditores[a]);
             const auditoresData = auditoresSorted.map(a => conteoAuditores[a]);
 
-            // Gráfico 1: Fechas
-            const ctxFechas = document.getElementById('chartFechas').getContext('2d');
-            if (chartFechasInstance) chartFechasInstance.destroy();
-            chartFechasInstance = new Chart(ctxFechas, {
+            // Gráfico 1: Horas Pico
+            const ctxHoras = document.getElementById('chartHoras').getContext('2d');
+            if (chartHorasInstance) chartHorasInstance.destroy();
+            chartHorasInstance = new Chart(ctxHoras, {
                 type: 'line',
                 data: {
-                    labels: fechasSorted,
+                    labels: horasLabels,
                     datasets: [{
                         label: 'Auditorías',
-                        data: fechasData,
+                        data: conteoHoras,
                         borderColor: '#2c387e',
-                        backgroundColor: 'rgba(44, 56, 126, 0.1)',
+                        backgroundColor: 'rgba(44, 56, 126, 0.15)',
                         fill: true,
                         tension: 0.3
                     }]
@@ -388,7 +395,7 @@
                 }
             });
 
-            // Gráfico 2: Auditores
+            // Gráfico 2: Todos los Auditores
             const ctxAuditores = document.getElementById('chartAuditores').getContext('2d');
             if (chartAuditoresInstance) chartAuditoresInstance.destroy();
             chartAuditoresInstance = new Chart(ctxAuditores, {
