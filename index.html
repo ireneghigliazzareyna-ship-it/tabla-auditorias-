@@ -86,6 +86,69 @@
             background-color: #fff;
         }
 
+        /* --- Dropdown Personalizado con Checkboxes --- */
+        .custom-select-container {
+            position: relative;
+            user-select: none;
+        }
+
+        .custom-select-header {
+            padding: 9px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+            background-color: #fcfcfc;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 18px;
+        }
+
+        .custom-select-header:hover {
+            border-color: var(--primary-blue);
+        }
+
+        .custom-select-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            margin-top: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+        }
+
+        .custom-select-list.show {
+            display: flex;
+        }
+
+        .checkbox-item {
+            padding: 8px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background-color 0.2s;
+        }
+
+        .checkbox-item:hover {
+            background-color: #eef3fb;
+        }
+
+        .checkbox-item input {
+            cursor: pointer;
+            margin: 0;
+        }
+
         /* Dashboard Grid */
         .dashboard-grid {
             display: grid;
@@ -220,12 +283,21 @@
                 <option value="">Todos los auditores</option>
             </select>
         </div>
+        
+        <!-- Nuevo Filtro de Proceso Desplegable con Checkboxes -->
         <div class="filter-group">
             <label>Proceso</label>
-            <select id="select-proceso" onchange="filtrarDatos()">
-                <option value="">Todos los procesos</option>
-            </select>
+            <div class="custom-select-container" id="dropdown-container">
+                <div class="custom-select-header" onclick="toggleDropdown()">
+                    <span id="dropdown-text">Todos los procesos</span>
+                    <span style="font-size: 10px;">▼</span>
+                </div>
+                <div class="custom-select-list" id="dropdown-list">
+                    <!-- Los checkboxes se inyectan con JS -->
+                </div>
+            </div>
         </div>
+
         <div class="filter-group">
             <label>Búsqueda General</label>
             <input type="text" id="search" placeholder="Buscar ID o texto..." oninput="filtrarDatos()">
@@ -272,7 +344,9 @@
         let datosOriginales = [];
         let chartHorasInstance = null;
         let chartAuditoresInstance = null;
+        let procesosSeleccionados = []; // Variable global para filtro de procesos
 
+        // Funciones auxiliares para normalizar datos
         function getAuditor(item) {
             return (item.AUDITOR || item.USUARIO || 'Desconocido').trim();
         }
@@ -290,13 +364,66 @@
             return str.replace('T', ' ').split('+')[0].split('.')[0];
         }
 
+        // Lógica del Dropdown Personalizado
+        function toggleDropdown() {
+            document.getElementById('dropdown-list').classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(event) {
+            const container = document.getElementById('dropdown-container');
+            if (!container.contains(event.target)) {
+                document.getElementById('dropdown-list').classList.remove('show');
+            }
+        });
+
+        function actualizarSeleccion() {
+            const checkboxes = document.querySelectorAll('.checkbox-proceso:checked');
+            procesosSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+            
+            const texto = document.getElementById('dropdown-text');
+            
+            if (procesosSeleccionados.length === 0) {
+                texto.innerText = 'Todos los procesos';
+            } else if (procesosSeleccionados.length === 1) {
+                texto.innerText = procesosSeleccionados[0];
+            } else {
+                texto.innerText = `${procesosSeleccionados.length} seleccionados`;
+            }
+            
+            filtrarDatos();
+        }
+
+        // Fetch de datos y agrupación por ID
         fetch('data.json?v=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
-                datosOriginales = data;
+                const datosAgrupados = {};
+                
+                data.forEach(item => {
+                    const id = getId(item);
+                    const procesoActual = getProceso(item);
+                    
+                    if (!id) return; // Saltamos si no tiene ID
+                    
+                    if (!datosAgrupados[id]) {
+                        // Creamos el registro y un Set para no duplicar nombres de procesos idénticos en un mismo ID
+                        datosAgrupados[id] = { ...item };
+                        datosAgrupados[id]._procesos = new Set([procesoActual]);
+                    } else {
+                        // Agregamos el proceso adicional al Set
+                        datosAgrupados[id]._procesos.add(procesoActual);
+                    }
+                });
+
+                // Convertimos el objeto en array y unimos los textos de los procesos
+                datosOriginales = Object.values(datosAgrupados).map(item => {
+                    item.PROCESO = Array.from(item._procesos).join(' + ');
+                    return item;
+                });
+
                 document.getElementById('status').style.display = 'none';
                 
-                poblarFiltros(data);
+                poblarFiltros(datosOriginales);
                 filtrarDatos();
             })
             .catch(err => {
@@ -331,19 +458,36 @@
 
         function poblarFiltros(data) {
             const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
-            const procesos = [...new Set(data.map(d => getProceso(d)).filter(Boolean))].sort();
+            
+            // Extraer procesos individuales para las opciones del menú
+            const procesosSet = new Set();
+            data.forEach(d => {
+                const procesosString = getProceso(d);
+                procesosString.split(' + ').forEach(p => procesosSet.add(p.trim()));
+            });
+            const procesos = [...procesosSet].filter(Boolean).sort();
 
+            // Llenar select de Auditores
             const selectAuditor = document.getElementById('select-auditor');
             selectAuditor.innerHTML = '<option value="">Todos los auditores</option>';
             auditores.forEach(a => selectAuditor.add(new Option(a, a)));
 
-            const selectProceso = document.getElementById('select-proceso');
-            selectProceso.innerHTML = '<option value="">Todos los procesos</option>';
-            procesos.forEach(p => selectProceso.add(new Option(p, p)));
+            // Llenar el Dropdown de Procesos con checkboxes
+            const listContainer = document.getElementById('dropdown-list');
+            let htmlCheckboxes = '';
+            procesos.forEach(p => {
+                htmlCheckboxes += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" class="checkbox-proceso" value="${p}" onchange="actualizarSeleccion()">
+                        ${p}
+                    </label>
+                `;
+            });
+            listContainer.innerHTML = htmlCheckboxes;
         }
 
         function renderGraficos(lista) {
-            // 1. Agrupar por HORA del Día (00:00 a 23:00)
+            // 1. Agrupar por HORA del Día
             const conteoHoras = Array(24).fill(0);
             lista.forEach(item => {
                 if (item.FECHA_HORA) {
@@ -360,7 +504,7 @@
 
             const horasLabels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
 
-            // 2. Agrupar por AUDITOR (TODOS, ordenados de mayor a menor)
+            // 2. Agrupar por AUDITOR
             const conteoAuditores = {};
             lista.forEach(item => {
                 let auditor = getAuditor(item);
@@ -395,7 +539,7 @@
                 }
             });
 
-            // Gráfico 2: Todos los Auditores
+            // Gráfico 2: Auditores
             const ctxAuditores = document.getElementById('chartAuditores').getContext('2d');
             if (chartAuditoresInstance) chartAuditoresInstance.destroy();
             chartAuditoresInstance = new Chart(ctxAuditores, {
@@ -422,7 +566,6 @@
             const fechaInicio = document.getElementById('fecha-inicio').value;
             const fechaFin = document.getElementById('fecha-fin').value;
             const auditor = document.getElementById('select-auditor').value;
-            const proceso = document.getElementById('select-proceso').value;
             const texto = document.getElementById('search').value.toLowerCase();
 
             const filtrados = datosOriginales.filter(d => {
@@ -431,10 +574,14 @@
                 const coincideFechaFin = !fechaFin || fechaItem <= fechaFin;
 
                 const auditorItem = getAuditor(d);
-                const procesoItem = getProceso(d);
+                const procesoItem = getProceso(d); // Puede contener 'Proceso A + Proceso B'
 
                 const coincideAuditor = !auditor || auditorItem === auditor;
-                const coincideProceso = !proceso || procesoItem === proceso;
+                
+                // Valida si el proceso seleccionado está incluido en la cadena combinada de procesos
+                const coincideProceso = procesosSeleccionados.length === 0 || 
+                                        procesosSeleccionados.some(p => procesoItem.includes(p));
+                
                 const coincideTexto = !texto || Object.values(d).some(v => String(v).toLowerCase().includes(texto));
 
                 return coincideFechaInicio && coincideFechaFin && coincideAuditor && coincideProceso && coincideTexto;
