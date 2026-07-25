@@ -371,8 +371,8 @@
                     const proc = getProceso(item).toUpperCase();
                     
                     if (proc.includes('CAZA')) {
-                        // FILTRO ESTRICTO: Solo aceptamos los que digan "FOUND" o "MELI" (Melis analizadas)
-                        if (proc.includes('FOUND') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
+                        // FILTRO ESTRICTO: Solo aceptamos los que digan "FOUND", "DFL", "MELI" o "ANALIZADA"
+                        if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
                             rawCaza.push(item);
                         }
                     } else {
