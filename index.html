@@ -3,13 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Auditoría TMWH - PI (MXNL01)</title>
+    <title>Dashboard TMWH & Caza Lost (MXNL01)</title>
     <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
+            /* Colores Auditoría TMWH */
             --primary-blue: #2c387e;
             --accent-yellow: #ffc107;
+            
+            /* Colores Caza Lost */
+            --primary-caza: #f5a623; 
+            --dark-caza: #d08c1b;
+            --bg-caza: #fffbf2;
+
+            /* Generales */
             --bg-gray: #f0f2f5;
             --card-bg: #ffffff;
         }
@@ -22,9 +30,19 @@
             color: #333;
         }
 
-        /* Banner Principal */
+        /* --- Estilos Generales Compartidos --- */
+        .section-container {
+            margin-bottom: 50px;
+            padding-bottom: 20px;
+            border-bottom: 3px dashed #ccc;
+        }
+        
+        .section-container:last-child {
+            border-bottom: none;
+            margin-bottom: 10px;
+        }
+
         .header-banner {
-            background-color: var(--primary-blue);
             color: white;
             padding: 20px 25px;
             border-radius: 6px;
@@ -40,13 +58,11 @@
         }
 
         .header-banner .subtitle {
-            color: var(--accent-yellow);
             font-weight: bold;
             font-size: 13px;
             margin-top: 4px;
         }
 
-        /* Contenedor de Filtros */
         .filter-panel {
             background: var(--card-bg);
             padding: 18px;
@@ -59,20 +75,19 @@
             align-items: end;
         }
 
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+        .filter-group { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 5px; 
         }
-
-        .filter-group label {
-            font-size: 11px;
-            font-weight: 700;
-            color: var(--primary-blue);
-            text-transform: uppercase;
+        
+        .filter-group label { 
+            font-size: 11px; 
+            font-weight: 700; 
+            text-transform: uppercase; 
         }
-
-        .filter-group input, .filter-group select {
+        
+        .filter-group input, .filter-group select, .custom-select-header {
             padding: 9px 12px;
             border: 1px solid #ccc;
             border-radius: 4px;
@@ -81,73 +96,40 @@
             outline: none;
         }
 
-        .filter-group input:focus, .filter-group select:focus {
-            border-color: var(--primary-blue);
-            background-color: #fff;
+        /* --- Dropdown Personalizado --- */
+        .custom-select-container { position: relative; user-select: none; }
+        .custom-select-header { 
+            cursor: pointer; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            min-height: 18px; 
         }
-
-        /* --- Dropdown Personalizado con Checkboxes --- */
-        .custom-select-container {
-            position: relative;
-            user-select: none;
-        }
-
-        .custom-select-header {
-            padding: 9px 12px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 13px;
-            background-color: #fcfcfc;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 18px;
-        }
-
-        .custom-select-header:hover {
-            border-color: var(--primary-blue);
-        }
-
         .custom-select-list {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #fff;
+            position: absolute; 
+            top: 100%; left: 0; right: 0; 
+            background: #fff; 
             border: 1px solid #ccc;
-            border-radius: 4px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            border-radius: 4px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15); 
             margin-top: 5px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
+            max-height: 200px; 
+            overflow-y: auto; 
+            z-index: 100; 
+            display: none; 
             flex-direction: column;
         }
-
-        .custom-select-list.show {
-            display: flex;
+        .custom-select-list.show { display: flex; }
+        .checkbox-item { 
+            padding: 8px 12px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+            cursor: pointer; 
+            font-size: 13px; 
         }
-
-        .checkbox-item {
-            padding: 8px 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: background-color 0.2s;
-        }
-
-        .checkbox-item:hover {
-            background-color: #eef3fb;
-        }
-
-        .checkbox-item input {
-            cursor: pointer;
-            margin: 0;
-        }
+        .checkbox-item:hover { background-color: #eef3fb; }
+        .checkbox-item input { cursor: pointer; margin: 0; }
 
         /* Dashboard Grid */
         .dashboard-grid {
@@ -157,14 +139,11 @@
             margin-bottom: 20px;
         }
 
-        @media (max-width: 992px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
+        @media (max-width: 992px) { 
+            .dashboard-grid { grid-template-columns: 1fr; } 
         }
 
         .kpi-card {
-            background: var(--primary-blue);
             color: white;
             padding: 20px;
             border-radius: 6px;
@@ -176,18 +155,8 @@
             align-items: center;
         }
 
-        .kpi-card .number {
-            font-size: 38px;
-            font-weight: bold;
-            color: var(--accent-yellow);
-        }
-
-        .kpi-card .label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-top: 5px;
-        }
+        .kpi-card .number { font-size: 38px; font-weight: bold; }
+        .kpi-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; }
 
         .chart-card {
             background: var(--card-bg);
@@ -196,22 +165,9 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
             height: 260px;
         }
+        .chart-card h3 { margin: 0 0 10px 0; font-size: 12px; text-transform: uppercase; }
+        .chart-container { position: relative; height: 210px; width: 100%; }
 
-        .chart-card h3 {
-            margin: 0 0 10px 0;
-            font-size: 12px;
-            color: var(--primary-blue);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 210px;
-            width: 100%;
-        }
-
-        /* Tabla de Resultados */
         .table-container {
             background: var(--card-bg);
             border-radius: 6px;
@@ -220,375 +176,454 @@
             max-height: 50vh;
             overflow-y: auto;
         }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { color: white; position: sticky; top: 0; padding: 12px 15px; text-align: left; font-weight: 600; z-index: 1; }
+        td { padding: 10px 15px; border-bottom: 1px solid #eef2f5; }
+        tr:nth-child(even) { background-color: #f8f9fa; }
+        tr:hover { background-color: #eef3fb; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-        }
+        /* ==================================================== */
+        /* TEMAS ESPECÍFICOS                                    */
+        /* ==================================================== */
+        
+        /* Tema TMWH (Azul) */
+        .theme-tmwh .header-banner { background-color: var(--primary-blue); }
+        .theme-tmwh .header-banner .subtitle { color: var(--accent-yellow); }
+        .theme-tmwh .filter-group label { color: var(--primary-blue); }
+        .theme-tmwh .filter-group input:focus, .theme-tmwh .custom-select-header:hover { border-color: var(--primary-blue); }
+        .theme-tmwh .kpi-card { background: var(--primary-blue); }
+        .theme-tmwh .kpi-card .number { color: var(--accent-yellow); }
+        .theme-tmwh .chart-card h3 { color: var(--primary-blue); }
+        .theme-tmwh th { background-color: var(--primary-blue); }
 
-        th {
-            background-color: var(--primary-blue);
-            color: white;
-            position: sticky;
-            top: 0;
-            padding: 12px 15px;
-            text-align: left;
-            font-weight: 600;
-            z-index: 1;
-        }
-
-        td {
-            padding: 10px 15px;
-            border-bottom: 1px solid #eef2f5;
-        }
-
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-
-        tr:hover {
-            background-color: #eef3fb;
-        }
-
-        #status {
-            text-align: center;
-            padding: 20px;
-            font-weight: bold;
-            color: #666;
-        }
+        /* Tema Caza Lost (Amarillo) */
+        .theme-caza { background-color: var(--bg-caza); padding: 15px; border-radius: 8px; }
+        .theme-caza .header-banner { background-color: var(--primary-caza); color: #222; }
+        .theme-caza .header-banner .subtitle { color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .theme-caza .filter-group label { color: var(--dark-caza); }
+        .theme-caza .filter-group input:focus, .theme-caza .custom-select-header:hover { border-color: var(--primary-caza); }
+        .theme-caza .kpi-card { background: var(--primary-caza); color: #222; }
+        .theme-caza .kpi-card .number { color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        .theme-caza .chart-card h3 { color: var(--dark-caza); }
+        .theme-caza th { background-color: var(--primary-caza); color: #222; }
+        
+        #status { text-align: center; padding: 20px; font-weight: bold; color: #666; }
     </style>
 </head>
 <body>
 
-    <!-- Encabezado -->
-    <div class="header-banner">
-        <h1>Auditoría TMWH</h1>
-        <div class="subtitle">PI - PROCESS IMPROVEMENT | SITE MXNL01</div>
-    </div>
+    <div id="status">Cargando dashboard, iniciando sistemas...</div>
 
-    <!-- Panel de Filtros -->
-    <div class="filter-panel">
-        <div class="filter-group">
-            <label>Fecha Inicio</label>
-            <input type="date" id="fecha-inicio" onchange="filtrarDatos()">
+    <!-- ========================================== -->
+    <!-- SECCIÓN 1: AUDITORÍA TMWH (AZUL)           -->
+    <!-- ========================================== -->
+    <div class="section-container theme-tmwh" id="panel-tmwh" style="display: none;">
+        <div class="header-banner">
+            <h1>Auditoría TMWH</h1>
+            <div class="subtitle">PI - PROCESS IMPROVEMENT | SITE MXNL01</div>
         </div>
-        <div class="filter-group">
-            <label>Fecha Fin</label>
-            <input type="date" id="fecha-fin" onchange="filtrarDatos()">
-        </div>
-        <div class="filter-group">
-            <label>Auditor</label>
-            <select id="select-auditor" onchange="filtrarDatos()">
-                <option value="">Todos los auditores</option>
-            </select>
-        </div>
-        
-        <!-- Nuevo Filtro de Proceso Desplegable con Checkboxes -->
-        <div class="filter-group">
-            <label>Proceso</label>
-            <div class="custom-select-container" id="dropdown-container">
-                <div class="custom-select-header" onclick="toggleDropdown()">
-                    <span id="dropdown-text">Todos los procesos</span>
-                    <span style="font-size: 10px;">▼</span>
+
+        <div class="filter-panel">
+            <div class="filter-group">
+                <label>Fecha Inicio</label>
+                <input type="date" id="fecha-inicio" onchange="filtrarDatos()">
+            </div>
+            <div class="filter-group">
+                <label>Fecha Fin</label>
+                <input type="date" id="fecha-fin" onchange="filtrarDatos()">
+            </div>
+            <div class="filter-group">
+                <label>Auditor</label>
+                <select id="select-auditor" onchange="filtrarDatos()">
+                    <option value="">Todos los auditores</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Proceso</label>
+                <div class="custom-select-container" id="dropdown-container-tmwh">
+                    <div class="custom-select-header" onclick="toggleDropdown('dropdown-list-tmwh')">
+                        <span id="dropdown-text-tmwh">Todos los procesos</span>
+                        <span style="font-size: 10px;">▼</span>
+                    </div>
+                    <div class="custom-select-list" id="dropdown-list-tmwh"></div>
                 </div>
-                <div class="custom-select-list" id="dropdown-list">
-                    <!-- Los checkboxes se inyectan con JS -->
+            </div>
+            <div class="filter-group">
+                <label>Búsqueda General</label>
+                <input type="text" id="search" placeholder="Buscar ID..." oninput="filtrarDatos()">
+            </div>
+        </div>
+
+        <div class="dashboard-grid">
+            <div class="kpi-card">
+                <div class="number" id="total-registros">0</div>
+                <div class="label">Auditorías Encontradas (Por ID)</div>
+            </div>
+            <div class="chart-card">
+                <h3>Distribución por Hora</h3>
+                <div class="chart-container"><canvas id="chartHoras"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Productividad por Auditor</h3>
+                <div class="chart-container"><canvas id="chartAuditores"></canvas></div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Fecha/Hora</th><th>Proceso</th><th>Auditor</th><th>ID</th></tr></thead>
+                <tbody id="contenido"></tbody>
+            </table>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- SECCIÓN 2: CAZA LOST (AMARILLO)            -->
+    <!-- ========================================== -->
+    <div class="section-container theme-caza" id="panel-caza" style="display: none;">
+        <div class="header-banner">
+            <h1>Caza Lost</h1>
+            <div class="subtitle">RECUPERACIÓN DFL & FOUND POR LP | SITE MXNL01</div>
+        </div>
+
+        <div class="filter-panel">
+            <div class="filter-group">
+                <label>Fecha Inicio</label>
+                <input type="date" id="fecha-inicio-caza" onchange="filtrarCaza()">
+            </div>
+            <div class="filter-group">
+                <label>Fecha Fin</label>
+                <input type="date" id="fecha-fin-caza" onchange="filtrarCaza()">
+            </div>
+            <div class="filter-group">
+                <label>Auditor (Caza)</label>
+                <select id="select-auditor-caza" onchange="filtrarCaza()">
+                    <option value="">Todos los auditores</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Tipo (DFL/Found)</label>
+                <div class="custom-select-container" id="dropdown-container-caza">
+                    <div class="custom-select-header" onclick="toggleDropdown('dropdown-list-caza')">
+                        <span id="dropdown-text-caza">Todos los tipos</span>
+                        <span style="font-size: 10px;">▼</span>
+                    </div>
+                    <div class="custom-select-list" id="dropdown-list-caza"></div>
                 </div>
             </div>
-        </div>
-
-        <div class="filter-group">
-            <label>Búsqueda General</label>
-            <input type="text" id="search" placeholder="Buscar ID o texto..." oninput="filtrarDatos()">
-        </div>
-    </div>
-
-    <!-- Dashboard -->
-    <div class="dashboard-grid">
-        <div class="kpi-card">
-            <div class="number" id="total-registros">0</div>
-            <div class="label">Total Auditorías Encontradas</div>
-        </div>
-        <div class="chart-card">
-            <h3>Distribución por Hora del Día</h3>
-            <div class="chart-container">
-                <canvas id="chartHoras"></canvas>
+            <div class="filter-group">
+                <label>Búsqueda LPN / ID</label>
+                <input type="text" id="search-caza" placeholder="Buscar ID..." oninput="filtrarCaza()">
             </div>
         </div>
-        <div class="chart-card">
-            <h3>Productividad por Auditor (Todos)</h3>
-            <div class="chart-container">
-                <canvas id="chartAuditores"></canvas>
+
+        <div class="dashboard-grid">
+            <div class="kpi-card">
+                <div class="number" id="total-registros-caza">0</div>
+                <div class="label">Productos Recuperados</div>
             </div>
+            <div class="chart-card">
+                <h3>Recuperación DFL vs Found</h3>
+                <div class="chart-container"><canvas id="chartTipoCaza"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <h3>Recuperación por Auditor</h3>
+                <div class="chart-container"><canvas id="chartAuditoresCaza"></canvas></div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            <table>
+                <thead><tr><th>Fecha/Hora</th><th>Tipo Recuperación</th><th>Auditor Responsable</th><th>ID / LPN</th></tr></thead>
+                <tbody id="contenido-caza"></tbody>
+            </table>
         </div>
     </div>
 
-    <!-- Tabla -->
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Fecha / Hora</th>
-                    <th>Proceso</th>
-                    <th>Auditor</th>
-                    <th>ID</th>
-                </tr>
-            </thead>
-            <tbody id="contenido"></tbody>
-        </table>
-        <div id="status">Cargando datos...</div>
-    </div>
 
+    <!-- ========================================== -->
+    <!-- SCRIPTS                                    -->
+    <!-- ========================================== -->
     <script>
-        let datosOriginales = [];
-        let chartHorasInstance = null;
-        let chartAuditoresInstance = null;
-        let procesosSeleccionados = []; // Variable global para filtro de procesos
+        // --- Variables Globales ---
+        let datosTMWH = [];
+        let datosCaza = [];
+        let procesosTMWHSeleccionados = [];
+        let procesosCazaSeleccionados = [];
+        
+        let chartHoras, chartAuditores, chartTipoCaza, chartAuditoresCaza;
 
-        // Funciones auxiliares para normalizar datos
-        function getAuditor(item) {
-            return (item.AUDITOR || item.USUARIO || 'Desconocido').trim();
+        // --- Helpers de Lectura ---
+        function getAuditor(item) { return (item.AUDITOR || item.USUARIO || 'Desconocido').trim(); }
+        function getProceso(item) { return (item.PROCESO || item.proceso || 'Sin Proceso').trim(); }
+        function getId(item) { return item.ID || item.ID_TRANSACCION || ''; }
+        function formFecha(str) { return str ? str.replace('T', ' ').split('+')[0].split('.')[0] : ''; }
+
+        // --- Control de Dropdowns ---
+        function toggleDropdown(id) { 
+            document.getElementById(id).classList.toggle('show'); 
         }
 
-        function getProceso(item) {
-            return (item.PROCESO || item.proceso || 'Sin Proceso').trim();
-        }
-
-        function getId(item) {
-            return item.ID || item.ID_TRANSACCION || '';
-        }
-
-        function formatearFechaHora(str) {
-            if (!str) return '';
-            return str.replace('T', ' ').split('+')[0].split('.')[0];
-        }
-
-        // Lógica del Dropdown Personalizado
-        function toggleDropdown() {
-            document.getElementById('dropdown-list').classList.toggle('show');
-        }
-
-        document.addEventListener('click', function(event) {
-            const container = document.getElementById('dropdown-container');
-            if (!container.contains(event.target)) {
-                document.getElementById('dropdown-list').classList.remove('show');
-            }
+        // Cierra los dropdowns si haces clic afuera
+        document.addEventListener('click', function(e) {
+            ['dropdown-container-tmwh', 'dropdown-container-caza'].forEach(containerId => {
+                const container = document.getElementById(containerId);
+                const listId = containerId === 'dropdown-container-tmwh' ? 'dropdown-list-tmwh' : 'dropdown-list-caza';
+                if (container && !container.contains(e.target)) {
+                    document.getElementById(listId).classList.remove('show');
+                }
+            });
         });
 
-        function actualizarSeleccion() {
-            const checkboxes = document.querySelectorAll('.checkbox-proceso:checked');
-            procesosSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+        // Actualizar Texto y Disparar Filtro TMWH
+        function actualizarSeleccionTMWH() {
+            const checkboxes = document.querySelectorAll('.cb-tmwh:checked');
+            procesosTMWHSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+            const texto = document.getElementById('dropdown-text-tmwh');
             
-            const texto = document.getElementById('dropdown-text');
-            
-            if (procesosSeleccionados.length === 0) {
-                texto.innerText = 'Todos los procesos';
-            } else if (procesosSeleccionados.length === 1) {
-                texto.innerText = procesosSeleccionados[0];
-            } else {
-                texto.innerText = `${procesosSeleccionados.length} seleccionados`;
-            }
+            if (procesosTMWHSeleccionados.length === 0) texto.innerText = 'Todos los procesos';
+            else if (procesosTMWHSeleccionados.length === 1) texto.innerText = procesosTMWHSeleccionados[0];
+            else texto.innerText = `${procesosTMWHSeleccionados.length} seleccionados`;
             
             filtrarDatos();
         }
 
-        // Fetch de datos y agrupación por ID
+        // Actualizar Texto y Disparar Filtro Caza
+        function actualizarSeleccionCaza() {
+            const checkboxes = document.querySelectorAll('.cb-caza:checked');
+            procesosCazaSeleccionados = Array.from(checkboxes).map(cb => cb.value);
+            const texto = document.getElementById('dropdown-text-caza');
+            
+            if (procesosCazaSeleccionados.length === 0) texto.innerText = 'Todos los tipos';
+            else if (procesosCazaSeleccionados.length === 1) texto.innerText = procesosCazaSeleccionados[0];
+            else texto.innerText = `${procesosCazaSeleccionados.length} seleccionados`;
+            
+            filtrarCaza();
+        }
+
+        // --- Fetch y Separación Principal ---
         fetch('data.json?v=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
-                const datosAgrupados = {};
-                
+                const rawTMWH = [];
+                const rawCaza = [];
+
+                // 1. Separar datos usando el prefijo 'CAZA' del nuevo Query
                 data.forEach(item => {
-                    const id = getId(item);
-                    const procesoActual = getProceso(item);
-                    
-                    if (!id) return; // Saltamos si no tiene ID
-                    
-                    if (!datosAgrupados[id]) {
-                        // Creamos el registro y un Set para no duplicar nombres de procesos idénticos en un mismo ID
-                        datosAgrupados[id] = { ...item };
-                        datosAgrupados[id]._procesos = new Set([procesoActual]);
+                    const proc = getProceso(item).toUpperCase();
+                    if (proc.includes('CAZA')) {
+                        rawCaza.push(item);
                     } else {
-                        // Agregamos el proceso adicional al Set
-                        datosAgrupados[id]._procesos.add(procesoActual);
+                        rawTMWH.push(item);
                     }
                 });
 
-                // Convertimos el objeto en array y unimos los textos de los procesos
-                datosOriginales = Object.values(datosAgrupados).map(item => {
+                // 2. Agrupar TMWH por ID
+                const agrupadosTMWH = {};
+                rawTMWH.forEach(item => {
+                    const id = getId(item);
+                    if (!id) return;
+                    if (!agrupadosTMWH[id]) {
+                        agrupadosTMWH[id] = { ...item };
+                        agrupadosTMWH[id]._procesos = new Set([getProceso(item)]);
+                    } else {
+                        agrupadosTMWH[id]._procesos.add(getProceso(item));
+                    }
+                });
+                datosTMWH = Object.values(agrupadosTMWH).map(item => {
                     item.PROCESO = Array.from(item._procesos).join(' + ');
                     return item;
                 });
 
+                // 3. Agrupar Caza Lost por ID
+                const agrupadosCaza = {};
+                rawCaza.forEach(item => {
+                    const id = getId(item);
+                    if (!id) return;
+                    if (!agrupadosCaza[id]) {
+                        agrupadosCaza[id] = { ...item };
+                        agrupadosCaza[id]._procesos = new Set([getProceso(item)]);
+                    } else {
+                        agrupadosCaza[id]._procesos.add(getProceso(item));
+                    }
+                });
+                datosCaza = Object.values(agrupadosCaza).map(item => {
+                    item.PROCESO = Array.from(item._procesos).join(' + ');
+                    return item;
+                });
+
+                // 4. Mostrar Pantallas y Poblar
                 document.getElementById('status').style.display = 'none';
-                
-                poblarFiltros(datosOriginales);
+                document.getElementById('panel-tmwh').style.display = 'block';
+                document.getElementById('panel-caza').style.display = 'block';
+
+                poblarFiltros(datosTMWH, 'TMWH');
+                poblarFiltros(datosCaza, 'CAZA');
                 filtrarDatos();
+                filtrarCaza();
             })
             .catch(err => {
                 document.getElementById('status').innerText = 'Error al cargar datos: ' + err.message;
             });
 
-        function renderTabla(lista) {
-            const tbody = document.getElementById('contenido');
-            document.getElementById('total-registros').innerText = lista.length.toLocaleString();
+        // --- Generador de Filtros ---
+        function poblarFiltros(data, tipo) {
+            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
+            
+            // Extraer procesos individuales (por si vinieron unidos por ' + ')
+            const procesosSet = new Set();
+            data.forEach(d => { getProceso(d).split(' + ').forEach(p => procesosSet.add(p.trim())); });
+            const procesos = [...procesosSet].filter(Boolean).sort();
+
+            // Select de Auditores
+            const selectAuditor = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
+            selectAuditor.innerHTML = '<option value="">Todos los auditores</option>';
+            auditores.forEach(a => selectAuditor.add(new Option(a, a)));
+
+            // Select Personalizado de Procesos
+            const listContainer = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
+            const cbClass = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
+            const fnChange = tipo === 'TMWH' ? 'actualizarSeleccionTMWH()' : 'actualizarSeleccionCaza()';
+            
+            let htmlCheckboxes = '';
+            procesos.forEach(p => {
+                htmlCheckboxes += `
+                    <label class="checkbox-item">
+                        <input type="checkbox" class="${cbClass}" value="${p}" onchange="${fnChange}">
+                        ${p}
+                    </label>`;
+            });
+            listContainer.innerHTML = htmlCheckboxes;
+        }
+
+        // ==========================================
+        // FUNCIONES TMWH (Panel Azul)
+        // ==========================================
+        function filtrarDatos() {
+            const fIni = document.getElementById('fecha-inicio').value;
+            const fFin = document.getElementById('fecha-fin').value;
+            const aud = document.getElementById('select-auditor').value;
+            const txt = document.getElementById('search').value.toLowerCase();
+
+            const filtrados = datosTMWH.filter(d => {
+                let fItem = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
+                const cFIni = !fIni || fItem >= fIni;
+                const cFFin = !fFin || fItem <= fFin;
+                const cAud = !aud || getAuditor(d) === aud;
+                const cProc = procesosTMWHSeleccionados.length === 0 || procesosTMWHSeleccionados.some(p => getProceso(d).includes(p));
+                const cTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
+                return cFIni && cFFin && cAud && cProc && cTxt;
+            });
+            renderTablaGenerica(filtrados, 'contenido', 'total-registros');
+            renderGraficosTMWH(filtrados);
+        }
+
+        function renderGraficosTMWH(lista) {
+            // Gráfico de Líneas (Horas)
+            const conteoHoras = Array(24).fill(0);
+            lista.forEach(item => {
+                if (item.FECHA_HORA) {
+                    const hStr = item.FECHA_HORA.includes('T') ? item.FECHA_HORA.split('T')[1] : item.FECHA_HORA.split(' ')[1];
+                    if (hStr) { const h = parseInt(hStr.split(':')[0], 10); if (!isNaN(h) && h >= 0 && h < 24) conteoHoras[h]++; }
+                }
+            });
+            const hLabels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
+            const ctxH = document.getElementById('chartHoras').getContext('2d');
+            if (chartHoras) chartHoras.destroy();
+            chartHoras = new Chart(ctxH, { 
+                type: 'line', 
+                data: { labels: hLabels, datasets: [{ data: conteoHoras, borderColor: '#2c387e', backgroundColor: 'rgba(44, 56, 126, 0.15)', fill: true, tension: 0.3 }] }, 
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } 
+            });
+
+            // Gráfico de Barras (Auditores)
+            const cAud = {};
+            lista.forEach(item => { let a = getAuditor(item).split('@')[0]; cAud[a] = (cAud[a] || 0) + 1; });
+            const aSorted = Object.keys(cAud).sort((a,b) => cAud[b] - cAud[a]);
+            const aData = aSorted.map(a => cAud[a]);
+            const ctxA = document.getElementById('chartAuditores').getContext('2d');
+            if (chartAuditores) chartAuditores.destroy();
+            chartAuditores = new Chart(ctxA, { 
+                type: 'bar', 
+                data: { labels: aSorted, datasets: [{ data: aData, backgroundColor: '#ffc107', borderRadius: 4 }] }, 
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } 
+            });
+        }
+
+        // ==========================================
+        // FUNCIONES CAZA LOST (Panel Amarillo)
+        // ==========================================
+        function filtrarCaza() {
+            const fIni = document.getElementById('fecha-inicio-caza').value;
+            const fFin = document.getElementById('fecha-fin-caza').value;
+            const aud = document.getElementById('select-auditor-caza').value;
+            const txt = document.getElementById('search-caza').value.toLowerCase();
+
+            const filtrados = datosCaza.filter(d => {
+                let fItem = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
+                const cFIni = !fIni || fItem >= fIni;
+                const cFFin = !fFin || fItem <= fFin;
+                const cAud = !aud || getAuditor(d) === aud;
+                const cProc = procesosCazaSeleccionados.length === 0 || procesosCazaSeleccionados.some(p => getProceso(d).includes(p));
+                const cTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
+                return cFIni && cFFin && cAud && cProc && cTxt;
+            });
+            renderTablaGenerica(filtrados, 'contenido-caza', 'total-registros-caza');
+            renderGraficosCaza(filtrados);
+        }
+
+        function renderGraficosCaza(lista) {
+            // Gráfico de Dona (Tipos de Recuperación)
+            const cTipo = {};
+            lista.forEach(item => { let p = getProceso(item); cTipo[p] = (cTipo[p] || 0) + 1; });
+            const tLabels = Object.keys(cTipo);
+            const tData = Object.values(cTipo);
+            const ctxT = document.getElementById('chartTipoCaza').getContext('2d');
+            if (chartTipoCaza) chartTipoCaza.destroy();
+            chartTipoCaza = new Chart(ctxT, { 
+                type: 'doughnut', 
+                data: { labels: tLabels, datasets: [{ data: tData, backgroundColor: ['#f5a623', '#2c387e', '#ffc107', '#4caf50'], borderWidth: 1 }] }, 
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: {size: 10} } } } } 
+            });
+
+            // Gráfico de Barras (Auditores Caza)
+            const cAud = {};
+            lista.forEach(item => { let a = getAuditor(item).split('@')[0]; cAud[a] = (cAud[a] || 0) + 1; });
+            const aSorted = Object.keys(cAud).sort((a,b) => cAud[b] - cAud[a]);
+            const aData = aSorted.map(a => cAud[a]);
+            const ctxA = document.getElementById('chartAuditoresCaza').getContext('2d');
+            if (chartAuditoresCaza) chartAuditoresCaza.destroy();
+            chartAuditoresCaza = new Chart(ctxA, { 
+                type: 'bar', 
+                data: { labels: aSorted, datasets: [{ data: aData, backgroundColor: '#d08c1b', borderRadius: 4 }] }, 
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } 
+            });
+        }
+
+        // ==========================================
+        // TABLA COMPARTIDA
+        // ==========================================
+        function renderTablaGenerica(lista, tbodyId, kpiId) {
+            const tbody = document.getElementById(tbodyId);
+            document.getElementById(kpiId).innerText = lista.length.toLocaleString();
             
             if (lista.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">No se encontraron registros</td></tr>';
                 return;
             }
-
+            
             let html = '';
             lista.forEach(item => {
-                const auditor = getAuditor(item);
-                const proceso = getProceso(item);
-                const idVal = getId(item);
-                const fechaLimpia = formatearFechaHora(item.FECHA_HORA);
-                
                 html += `<tr>
-                    <td>${fechaLimpia}</td>
-                    <td><strong>${proceso}</strong></td>
-                    <td>${auditor}</td>
-                    <td><code>${idVal}</code></td>
+                    <td>${formFecha(item.FECHA_HORA)}</td>
+                    <td><strong>${getProceso(item)}</strong></td>
+                    <td>${getAuditor(item)}</td>
+                    <td><code>${getId(item)}</code></td>
                 </tr>`;
             });
             tbody.innerHTML = html;
-        }
-
-        function poblarFiltros(data) {
-            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
-            
-            // Extraer procesos individuales para las opciones del menú
-            const procesosSet = new Set();
-            data.forEach(d => {
-                const procesosString = getProceso(d);
-                procesosString.split(' + ').forEach(p => procesosSet.add(p.trim()));
-            });
-            const procesos = [...procesosSet].filter(Boolean).sort();
-
-            // Llenar select de Auditores
-            const selectAuditor = document.getElementById('select-auditor');
-            selectAuditor.innerHTML = '<option value="">Todos los auditores</option>';
-            auditores.forEach(a => selectAuditor.add(new Option(a, a)));
-
-            // Llenar el Dropdown de Procesos con checkboxes
-            const listContainer = document.getElementById('dropdown-list');
-            let htmlCheckboxes = '';
-            procesos.forEach(p => {
-                htmlCheckboxes += `
-                    <label class="checkbox-item">
-                        <input type="checkbox" class="checkbox-proceso" value="${p}" onchange="actualizarSeleccion()">
-                        ${p}
-                    </label>
-                `;
-            });
-            listContainer.innerHTML = htmlCheckboxes;
-        }
-
-        function renderGraficos(lista) {
-            // 1. Agrupar por HORA del Día
-            const conteoHoras = Array(24).fill(0);
-            lista.forEach(item => {
-                if (item.FECHA_HORA) {
-                    const horaStr = item.FECHA_HORA.includes('T') ? 
-                        item.FECHA_HORA.split('T')[1] : item.FECHA_HORA.split(' ')[1];
-                    if (horaStr) {
-                        const hora = parseInt(horaStr.split(':')[0], 10);
-                        if (!isNaN(hora) && hora >= 0 && hora < 24) {
-                            conteoHoras[hora]++;
-                        }
-                    }
-                }
-            });
-
-            const horasLabels = Array.from({length: 24}, (_, i) => `${String(i).padStart(2, '0')}:00`);
-
-            // 2. Agrupar por AUDITOR
-            const conteoAuditores = {};
-            lista.forEach(item => {
-                let auditor = getAuditor(item);
-                if (auditor.includes('@')) auditor = auditor.split('@')[0];
-                conteoAuditores[auditor] = (conteoAuditores[auditor] || 0) + 1;
-            });
-
-            const auditoresSorted = Object.keys(conteoAuditores).sort((a,b) => conteoAuditores[b] - conteoAuditores[a]);
-            const auditoresData = auditoresSorted.map(a => conteoAuditores[a]);
-
-            // Gráfico 1: Horas Pico
-            const ctxHoras = document.getElementById('chartHoras').getContext('2d');
-            if (chartHorasInstance) chartHorasInstance.destroy();
-            chartHorasInstance = new Chart(ctxHoras, {
-                type: 'line',
-                data: {
-                    labels: horasLabels,
-                    datasets: [{
-                        label: 'Auditorías',
-                        data: conteoHoras,
-                        borderColor: '#2c387e',
-                        backgroundColor: 'rgba(44, 56, 126, 0.15)',
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-
-            // Gráfico 2: Auditores
-            const ctxAuditores = document.getElementById('chartAuditores').getContext('2d');
-            if (chartAuditoresInstance) chartAuditoresInstance.destroy();
-            chartAuditoresInstance = new Chart(ctxAuditores, {
-                type: 'bar',
-                data: {
-                    labels: auditoresSorted,
-                    datasets: [{
-                        label: 'Auditorías',
-                        data: auditoresData,
-                        backgroundColor: '#ffc107',
-                        borderRadius: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        }
-
-        function filtrarDatos() {
-            const fechaInicio = document.getElementById('fecha-inicio').value;
-            const fechaFin = document.getElementById('fecha-fin').value;
-            const auditor = document.getElementById('select-auditor').value;
-            const texto = document.getElementById('search').value.toLowerCase();
-
-            const filtrados = datosOriginales.filter(d => {
-                let fechaItem = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                const coincideFechaInicio = !fechaInicio || fechaItem >= fechaInicio;
-                const coincideFechaFin = !fechaFin || fechaItem <= fechaFin;
-
-                const auditorItem = getAuditor(d);
-                const procesoItem = getProceso(d); // Puede contener 'Proceso A + Proceso B'
-
-                const coincideAuditor = !auditor || auditorItem === auditor;
-                
-                // Valida si el proceso seleccionado está incluido en la cadena combinada de procesos
-                const coincideProceso = procesosSeleccionados.length === 0 || 
-                                        procesosSeleccionados.some(p => procesoItem.includes(p));
-                
-                const coincideTexto = !texto || Object.values(d).some(v => String(v).toLowerCase().includes(texto));
-
-                return coincideFechaInicio && coincideFechaFin && coincideAuditor && coincideProceso && coincideTexto;
-            });
-
-            renderTabla(filtrados);
-            renderGraficos(filtrados);
         }
     </script>
 </body>
