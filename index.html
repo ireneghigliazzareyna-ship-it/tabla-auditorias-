@@ -151,11 +151,10 @@
 
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
-                    // REGLA ESTRICTA DE SEPARACIÓN: Si es literalmente Recuperación/DFL, va a Caza. Si no, va a TMWH.
-                    if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
+                    // REGLA DEFINITIVA: Si dice CAZA, a Caza Lost. Lo demás a TMWH.
+                    if (proc.includes('CAZA')) {
                         rawCaza.push(item);
                     } else {
-                        // Aquí caerá P2M, TMWH MU, Recibos, etc.
                         rawTMWH.push(item);
                     }
                 });
@@ -165,6 +164,7 @@
                 rawTMWH.forEach(i => {
                     let id = getId(i);
                     if(!id || id === 'null') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
+                    
                     if(!agTMWH[id]) { agTMWH[id] = {...i, _p: new Set([getProceso(i)])}; }
                     else { agTMWH[id]._p.add(getProceso(i)); }
                 });
@@ -220,6 +220,7 @@
             });
             
             document.getElementById('total-registros').innerText = res.length.toLocaleString();
+            
             document.getElementById('contenido').innerHTML = res.length ? res.map(i => {
                 let mostrarId = getId(i);
                 if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
@@ -238,17 +239,23 @@
             const audSeleccionado = document.getElementById('select-auditor').value;
             const tituloGrafica = document.getElementById('chartAuditores').parentElement.previousElementSibling;
             
-            let labelsBarra = []; let dataBarra = [];
+            let labelsBarra = [];
+            let dataBarra = [];
 
             if (audSeleccionado) {
+                // Desglosar procesos del auditor
                 tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
                 const pC = {}; 
                 lista.forEach(i => { 
-                    getProceso(i).split('+').forEach(p => { let n = p.trim(); if (n) pC[n] = (pC[n] || 0) + 1; });
+                    getProceso(i).split('+').forEach(p => {
+                        let nombreProceso = p.trim();
+                        if (nombreProceso) pC[nombreProceso] = (pC[nombreProceso] || 0) + 1;
+                    });
                 });
                 labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]);
                 dataBarra = labelsBarra.map(p=>pC[p]);
             } else {
+                // Todos los auditores
                 tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
                 const aC = {}; 
                 lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
@@ -265,7 +272,8 @@
             const fI = document.getElementById('fecha-inicio-caza').value, fF = document.getElementById('fecha-fin-caza').value;
             const aud = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
             
-            let countFound = 0, sumFound = 0; let countDfl = 0, sumDfl = 0;
+            let countFound = 0, sumFound = 0;
+            let countDfl = 0, sumDfl = 0;
 
             const res = datosCaza.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
@@ -275,8 +283,13 @@
                 
                 if (match) {
                     const proc = getProceso(d).toUpperCase();
-                    if (proc.includes('FOUND')) { countFound++; sumFound += getMonto(d); } 
-                    else { countDfl++; sumDfl += getMonto(d); }
+                    if (proc.includes('FOUND')) {
+                        countFound++;
+                        sumFound += getMonto(d);
+                    } else {
+                        countDfl++;
+                        sumDfl += getMonto(d);
+                    }
                 }
                 return match;
             });
@@ -289,6 +302,7 @@
             document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
                 const esFound = getProceso(i).toUpperCase().includes('FOUND');
                 const colorDinero = esFound ? '#4caf50' : '#d08c1b';
+                
                 let mostrarId = getId(i);
                 if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
                 
