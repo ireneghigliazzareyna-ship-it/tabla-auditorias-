@@ -151,11 +151,13 @@
             .then(data => {
                 const rawTMWH = [], rawCaza = [];
 
+                // LÓGICA ORIGINAL DEL TXT PARA SEPARAR CAZA VS TMWH
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
-                    // CORRECCIÓN 1: Filtro más inteligente para no perder datos de Caza Lost
-                    if (proc.includes('CAZA') || proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
-                        rawCaza.push(item);
+                    if (proc.includes('CAZA')) {
+                        if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
+                            rawCaza.push(item);
+                        }
                     } else {
                         rawTMWH.push(item);
                     }
@@ -172,7 +174,7 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // CAZA LOST: Cada evento cuenta independiente.
+                // CAZA LOST: NO SE AGRUPAN. Lógica original del TXT.
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
                     if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID_')) {
@@ -244,8 +246,8 @@
             let labelsBarra = [];
             let dataBarra = [];
 
+            // NUEVA LÓGICA DE GRÁFICA TMWH
             if (audSeleccionado) {
-                // CORRECCIÓN 2: Separar procesos agrupados por "+" para contarlos individualmente
                 tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
                 const pC = {}; 
                 lista.forEach(i => { 
@@ -272,7 +274,7 @@
             });
         }
 
-        // CAZA Logic
+        // CAZA Logic (LÓGICA ORIGINAL DEL TXT INTACTA)
         function filtrarCaza() {
             const fI = document.getElementById('fecha-inicio-caza').value, fF = document.getElementById('fecha-fin-caza').value;
             const aud = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
