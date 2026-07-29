@@ -249,7 +249,7 @@
     <div id="panel-caza" style="display: none; background-color: var(--caza-bg); padding-bottom: 40px;">
         <div class="main-header header-caza">
             <h1>Caza Lost</h1>
-            <span>RECUPERACIÓN DFL & FOUND (SOLO ANALIZADAS) | SITE MXNL01</span>
+            <span>RECUPERACIÓN DFL & FOUND | SITE MXNL01</span>
         </div>
 
         <div class="module-wrapper">
@@ -371,7 +371,6 @@
                     const proc = getProceso(item).toUpperCase();
                     
                     if (proc.includes('CAZA')) {
-                        // FILTRO ESTRICTO: Solo aceptamos los que digan "FOUND", "DFL", "MELI" o "ANALIZADA"
                         if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
                             rawCaza.push(item);
                         }
@@ -380,25 +379,41 @@
                     }
                 });
 
-                // Agrupar TMWH
+                // Agrupar TMWH (Protegido contra nulos)
                 const agTMWH = {};
                 rawTMWH.forEach(i => {
-                    const id = getId(i);
-                    if(!id) return;
+                    let id = getId(i);
+                    if(!id || id === 'null') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
+                    
                     if(!agTMWH[id]) { agTMWH[id] = {...i, _p: new Set([getProceso(i)])}; }
                     else { agTMWH[id]._p.add(getProceso(i)); }
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // Agrupar Caza
+                // Agrupar Caza (Protegido contra nulos)
                 const agCaza = {};
                 rawCaza.forEach(i => {
-                    const id = getId(i);
-                    if(!id) return;
+                    let id = getId(i);
+                    // Generamos un ID seguro y único si viene vacío para que cuente individualmente
+                    if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID_')) {
+                        id = 'TMP_' + Math.random().toString(36).substring(2, 10);
+                        i.ID = id; // Asegurar que el objeto lleve el ID temporal
+                    }
+                    
                     if(!agCaza[id]) { agCaza[id] = {...i, _p: new Set([getProceso(i)])}; }
                     else { agCaza[id]._p.add(getProceso(i)); }
                 });
-                datosCaza = Object.values(agCaza).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
+                
+                // Regla de oro para Caza: Si tiene Found y DFL agrupados, prioriza 'FOUND'
+                datosCaza = Object.values(agCaza).map(i => { 
+                    const procArr = Array.from(i._p);
+                    if(procArr.includes('CAZA - FOUND')) {
+                        i.PROCESO = 'CAZA - FOUND';
+                    } else {
+                        i.PROCESO = procArr.join(' + '); 
+                    }
+                    return i; 
+                });
 
                 document.getElementById('status').style.display = 'none';
                 document.getElementById('panel-tmwh').style.display = 'block';
@@ -441,7 +456,12 @@
             });
             
             document.getElementById('total-registros').innerText = res.length.toLocaleString();
-            document.getElementById('contenido').innerHTML = res.length ? res.map(i => `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${getId(i)}</code></td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
+            
+            document.getElementById('contenido').innerHTML = res.length ? res.map(i => {
+                let mostrarId = getId(i);
+                if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
+                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td></tr>`;
+            }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
             
             graficarTMWH(res);
         }
@@ -474,12 +494,10 @@
                 
                 if (match) {
                     const proc = getProceso(d).toUpperCase();
-                    // Si la palabra clave FOUND está en el proceso, es recuperación real
                     if (proc.includes('FOUND')) {
                         countFound++;
                         sumFound += getMonto(d);
                     } else {
-                        // Si no, es una Meli analizada o algo que se fue a DFL
                         countDfl++;
                         sumDfl += getMonto(d);
                     }
@@ -487,21 +505,24 @@
                 return match;
             });
             
-            // Actualizar las 4 tarjetas nuevas
             document.getElementById('kpi-found-count').innerText = countFound.toLocaleString();
             document.getElementById('kpi-found-usd').innerText = formatearDinero(sumFound);
             document.getElementById('kpi-dfl-count').innerText = countDfl.toLocaleString();
             document.getElementById('kpi-dfl-usd').innerText = formatearDinero(sumDfl);
 
-            // Actualizar tabla con colores para el dinero
             document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
                 const esFound = getProceso(i).toUpperCase().includes('FOUND');
                 const colorDinero = esFound ? '#4caf50' : '#d08c1b';
+                
+                // Si le inventamos un TMP ID o viene nulo desde SQL, lo mostramos bonito
+                let mostrarId = getId(i);
+                if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
+                
                 return `<tr>
                     <td>${formFecha(i.FECHA_HORA)}</td>
                     <td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td>
                     <td>${getAuditor(i)}</td>
-                    <td><code>${getId(i)}</code></td>
+                    <td><code>${mostrarId}</code></td>
                     <td><strong style="color: ${colorDinero}">${formatearDinero(getMonto(i))}</strong></td>
                 </tr>`;
             }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
@@ -510,12 +531,10 @@
         }
 
         function graficarCaza(lista) {
-            // Gráfico de Dona: Casos DFL vs Found
             const tC = {}; lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
             if(chartTipoCaza) chartTipoCaza.destroy();
             chartTipoCaza = new Chart(document.getElementById('chartTipoCaza').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
 
-            // Gráfico de Barras Apiladas: Monto Recuperado vs DFL por Auditor
             const auditoresObj = {};
             lista.forEach(i => { 
                 let a = getAuditor(i).split('@')[0]; 
@@ -534,7 +553,6 @@
                 auditoresObj[a].total += monto;
             });
             
-            // Ordenar auditores por el que procesó más monto en total
             const as = Object.keys(auditoresObj).sort((a,b) => auditoresObj[b].total - auditoresObj[a].total);
             
             const dataFound = as.map(a => auditoresObj[a].found);
