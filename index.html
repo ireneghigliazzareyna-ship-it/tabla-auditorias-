@@ -153,10 +153,9 @@
 
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
-                    if (proc.includes('CAZA')) {
-                        if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
-                            rawCaza.push(item);
-                        }
+                    // CORRECCIÓN 1: Filtro más inteligente para no perder datos de Caza Lost
+                    if (proc.includes('CAZA') || proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
+                        rawCaza.push(item);
                     } else {
                         rawTMWH.push(item);
                     }
@@ -173,7 +172,7 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // CAZA LOST: NO SE AGRUPAN. Cada evento de un auditor cuenta de forma independiente.
+                // CAZA LOST: Cada evento cuenta independiente.
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
                     if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID_')) {
@@ -234,13 +233,11 @@
         }
 
         function graficarTMWH(lista) {
-            // 1. Gráfica de Distribución por Hora
             const hC = Array(24).fill(0);
             lista.forEach(i => { if(i.FECHA_HORA) { const h = parseInt(i.FECHA_HORA.includes('T') ? i.FECHA_HORA.split('T')[1] : i.FECHA_HORA.split(' ')[1]); if(!isNaN(h)) hC[h]++; } });
             if(chartHoras) chartHoras.destroy();
             chartHoras = new Chart(document.getElementById('chartHoras').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#292d5c', backgroundColor: 'rgba(41, 45, 92, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
 
-            // 2. Gráfica Dinámica (Auditores vs Procesos)
             const audSeleccionado = document.getElementById('select-auditor').value;
             const tituloGrafica = document.getElementById('chartAuditores').parentElement.previousElementSibling;
             
@@ -248,14 +245,18 @@
             let dataBarra = [];
 
             if (audSeleccionado) {
-                // MODO PROCESOS: Desglosa tareas del auditor seleccionado
+                // CORRECCIÓN 2: Separar procesos agrupados por "+" para contarlos individualmente
                 tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
                 const pC = {}; 
-                lista.forEach(i => { let p = getProceso(i); pC[p] = (pC[p]||0)+1; });
+                lista.forEach(i => { 
+                    getProceso(i).split('+').forEach(p => {
+                        let nombreProceso = p.trim();
+                        if (nombreProceso) pC[nombreProceso] = (pC[nombreProceso] || 0) + 1;
+                    });
+                });
                 labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]);
                 dataBarra = labelsBarra.map(p=>pC[p]);
             } else {
-                // MODO AUDITORES: Muestra competencia general
                 tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
                 const aC = {}; 
                 lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
