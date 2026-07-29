@@ -118,7 +118,6 @@
 
         function getAuditor(i) { return (i.AUDITOR || i.USUARIO || 'Desconocido').trim(); }
         function getProceso(i) { return (i.PROCESO || i.proceso || '').trim(); }
-        function getResultadoCaza(i) { return (i.RESULTADO || i.resultado || getProceso(i)).trim(); }
         function getId(i) { return i.ID || i.ID_TRANSACCION || ''; }
         function getMonto(i) { return parseFloat(i.MONTO || 0); }
         function formFecha(str) { return str ? str.replace('T', ' ').split('+')[0].split('.')[0] : ''; }
@@ -154,13 +153,10 @@
 
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
-                    const resValue = getResultadoCaza(item).toUpperCase();
-                    const tieneMonto = item.MONTO !== undefined && item.MONTO !== null && item.MONTO !== "";
-
-                    // NUEVO FILTRO A PRUEBA DE FALLOS: Si menciona FOUND, DFL, CAZA o tiene Dinero, es Caza Lost.
-                    if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('CAZA') || proc.includes('MELI') ||
-                        resValue.includes('FOUND') || resValue.includes('DFL') || tieneMonto) {
-                        rawCaza.push(item);
+                    if (proc.includes('CAZA')) {
+                        if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
+                            rawCaza.push(item);
+                        }
                     } else {
                         rawTMWH.push(item);
                     }
@@ -177,7 +173,8 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // CAZA LOST: INDIVIDUAL, NUNCA SE AGRUPA
+                // CAZA LOST: NO SE AGRUPAN. Cada evento de un auditor cuenta de forma independiente.
+                // Esto evita que el DFL de Irene se fusione con el Found de otro auditor.
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
                     if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID_')) {
@@ -201,11 +198,7 @@
         function poblarFiltros(data, tipo) {
             const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
             const setP = new Set();
-            if (tipo === 'TMWH') {
-                data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
-            } else {
-                data.forEach(d => { setP.add(getResultadoCaza(d).replace('CAZA - ','').trim()); });
-            }
+            data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
             const procesos = [...setP].filter(Boolean).sort();
 
             const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
@@ -219,7 +212,7 @@
             list.innerHTML = procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
         }
 
-        // TMWH Logic (CON LA GRÁFICA INTELIGENTE INTACTA)
+        // TMWH Logic
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
             const aud = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
@@ -247,37 +240,10 @@
             if(chartHoras) chartHoras.destroy();
             chartHoras = new Chart(document.getElementById('chartHoras').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#292d5c', backgroundColor: 'rgba(41, 45, 92, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
 
-            const audSeleccionado = document.getElementById('select-auditor').value;
-            const tituloGrafica = document.getElementById('chartAuditores').parentElement.previousElementSibling;
-            
-            let labelsBarra = [];
-            let dataBarra = [];
-
-            if (audSeleccionado) {
-                tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
-                const pC = {}; 
-                lista.forEach(i => { 
-                    getProceso(i).split('+').forEach(p => {
-                        let nombreProceso = p.trim();
-                        if (nombreProceso) pC[nombreProceso] = (pC[nombreProceso] || 0) + 1;
-                    });
-                });
-                labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]);
-                dataBarra = labelsBarra.map(p=>pC[p]);
-            } else {
-                tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
-                const aC = {}; 
-                lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
-                labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
-                dataBarra = labelsBarra.map(a=>aC[a]);
-            }
-
+            const aC = {}; lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
+            const as = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
             if(chartAuditores) chartAuditores.destroy();
-            chartAuditores = new Chart(document.getElementById('chartAuditores').getContext('2d'), { 
-                type: 'bar', 
-                data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius:3 }] }, 
-                options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }
-            });
+            chartAuditores = new Chart(document.getElementById('chartAuditores').getContext('2d'), { type: 'bar', data: { labels: as, datasets: [{ data: as.map(a=>aC[a]), backgroundColor: '#ffc107', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
         }
 
         // CAZA Logic
@@ -291,12 +257,12 @@
             const res = datosCaza.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
                 const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                              (procCaza.length === 0 || procCaza.some(p => getResultadoCaza(d).includes(p))) &&
+                              (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
                               (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
                 
                 if (match) {
-                    const resFinal = getResultadoCaza(d).toUpperCase();
-                    if (resFinal.includes('FOUND')) {
+                    const proc = getProceso(d).toUpperCase();
+                    if (proc.includes('FOUND')) {
                         countFound++;
                         sumFound += getMonto(d);
                     } else {
@@ -313,8 +279,7 @@
             document.getElementById('kpi-dfl-usd').innerText = formatearDinero(sumDfl);
 
             document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
-                const valorVisual = getResultadoCaza(i).replace('CAZA - ','').trim();
-                const esFound = valorVisual.toUpperCase().includes('FOUND');
+                const esFound = getProceso(i).toUpperCase().includes('FOUND');
                 const colorDinero = esFound ? '#4caf50' : '#d08c1b';
                 
                 let mostrarId = getId(i);
@@ -322,7 +287,7 @@
                 
                 return `<tr>
                     <td>${formFecha(i.FECHA_HORA)}</td>
-                    <td><strong>${valorVisual}</strong></td>
+                    <td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td>
                     <td>${getAuditor(i)}</td>
                     <td><code>${mostrarId}</code></td>
                     <td><strong style="color: ${colorDinero}">${formatearDinero(getMonto(i))}</strong></td>
@@ -333,7 +298,7 @@
         }
 
         function graficarCaza(lista) {
-            const tC = {}; lista.forEach(i => { let p = getResultadoCaza(i).replace('CAZA - ','').trim(); tC[p] = (tC[p]||0)+1; });
+            const tC = {}; lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
             if(chartTipoCaza) chartTipoCaza.destroy();
             chartTipoCaza = new Chart(document.getElementById('chartTipoCaza').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
 
@@ -341,7 +306,7 @@
             lista.forEach(i => { 
                 let a = getAuditor(i).split('@')[0]; 
                 let monto = getMonto(i);
-                let esFound = getResultadoCaza(i).toUpperCase().includes('FOUND');
+                let esFound = getProceso(i).toUpperCase().includes('FOUND');
                 
                 if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
                 if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
