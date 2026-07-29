@@ -118,6 +118,7 @@
 
         function getAuditor(i) { return (i.AUDITOR || i.USUARIO || 'Desconocido').trim(); }
         function getProceso(i) { return (i.PROCESO || i.proceso || '').trim(); }
+        function getResultadoCaza(i) { return (i.RESULTADO || i.resultado || getProceso(i)).trim(); }
         function getId(i) { return i.ID || i.ID_TRANSACCION || ''; }
         function getMonto(i) { return parseFloat(i.MONTO || 0); }
         function formFecha(str) { return str ? str.replace('T', ' ').split('+')[0].split('.')[0] : ''; }
@@ -151,13 +152,15 @@
             .then(data => {
                 const rawTMWH = [], rawCaza = [];
 
-                // LÓGICA ORIGINAL DEL TXT PARA SEPARAR CAZA VS TMWH
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
-                    if (proc.includes('CAZA')) {
-                        if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('MELI') || proc.includes('ANALIZADA')) {
-                            rawCaza.push(item);
-                        }
+                    const resValue = getResultadoCaza(item).toUpperCase();
+                    const tieneMonto = item.MONTO !== undefined && item.MONTO !== null && item.MONTO !== "";
+
+                    // NUEVO FILTRO A PRUEBA DE FALLOS: Si menciona FOUND, DFL, CAZA o tiene Dinero, es Caza Lost.
+                    if (proc.includes('FOUND') || proc.includes('DFL') || proc.includes('CAZA') || proc.includes('MELI') ||
+                        resValue.includes('FOUND') || resValue.includes('DFL') || tieneMonto) {
+                        rawCaza.push(item);
                     } else {
                         rawTMWH.push(item);
                     }
@@ -174,7 +177,7 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // CAZA LOST: NO SE AGRUPAN. Lógica original del TXT.
+                // CAZA LOST: INDIVIDUAL, NUNCA SE AGRUPA
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
                     if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID_')) {
@@ -198,7 +201,11 @@
         function poblarFiltros(data, tipo) {
             const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
             const setP = new Set();
-            data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
+            if (tipo === 'TMWH') {
+                data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
+            } else {
+                data.forEach(d => { setP.add(getResultadoCaza(d).replace('CAZA - ','').trim()); });
+            }
             const procesos = [...setP].filter(Boolean).sort();
 
             const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
@@ -212,7 +219,7 @@
             list.innerHTML = procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
         }
 
-        // TMWH Logic
+        // TMWH Logic (CON LA GRÁFICA INTELIGENTE INTACTA)
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
             const aud = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
@@ -246,7 +253,6 @@
             let labelsBarra = [];
             let dataBarra = [];
 
-            // NUEVA LÓGICA DE GRÁFICA TMWH
             if (audSeleccionado) {
                 tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
                 const pC = {}; 
@@ -274,7 +280,7 @@
             });
         }
 
-        // CAZA Logic (LÓGICA ORIGINAL DEL TXT INTACTA)
+        // CAZA Logic
         function filtrarCaza() {
             const fI = document.getElementById('fecha-inicio-caza').value, fF = document.getElementById('fecha-fin-caza').value;
             const aud = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
@@ -285,12 +291,12 @@
             const res = datosCaza.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
                 const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                              (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
+                              (procCaza.length === 0 || procCaza.some(p => getResultadoCaza(d).includes(p))) &&
                               (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
                 
                 if (match) {
-                    const proc = getProceso(d).toUpperCase();
-                    if (proc.includes('FOUND')) {
+                    const resFinal = getResultadoCaza(d).toUpperCase();
+                    if (resFinal.includes('FOUND')) {
                         countFound++;
                         sumFound += getMonto(d);
                     } else {
@@ -307,7 +313,8 @@
             document.getElementById('kpi-dfl-usd').innerText = formatearDinero(sumDfl);
 
             document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
-                const esFound = getProceso(i).toUpperCase().includes('FOUND');
+                const valorVisual = getResultadoCaza(i).replace('CAZA - ','').trim();
+                const esFound = valorVisual.toUpperCase().includes('FOUND');
                 const colorDinero = esFound ? '#4caf50' : '#d08c1b';
                 
                 let mostrarId = getId(i);
@@ -315,7 +322,7 @@
                 
                 return `<tr>
                     <td>${formFecha(i.FECHA_HORA)}</td>
-                    <td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td>
+                    <td><strong>${valorVisual}</strong></td>
                     <td>${getAuditor(i)}</td>
                     <td><code>${mostrarId}</code></td>
                     <td><strong style="color: ${colorDinero}">${formatearDinero(getMonto(i))}</strong></td>
@@ -326,7 +333,7 @@
         }
 
         function graficarCaza(lista) {
-            const tC = {}; lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
+            const tC = {}; lista.forEach(i => { let p = getResultadoCaza(i).replace('CAZA - ','').trim(); tC[p] = (tC[p]||0)+1; });
             if(chartTipoCaza) chartTipoCaza.destroy();
             chartTipoCaza = new Chart(document.getElementById('chartTipoCaza').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
 
@@ -334,7 +341,7 @@
             lista.forEach(i => { 
                 let a = getAuditor(i).split('@')[0]; 
                 let monto = getMonto(i);
-                let esFound = getProceso(i).toUpperCase().includes('FOUND');
+                let esFound = getResultadoCaza(i).toUpperCase().includes('FOUND');
                 
                 if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
                 if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
