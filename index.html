@@ -170,10 +170,11 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // Caza Lost: Independientes
+                // Caza Lost: Independientes (CON SEGUROS ACTIVOS)
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
-                    if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID_')) {
+                    // Aquí está el seguro: si viene 'SIN_ID' desde la base de datos (nuestra nueva SQL), le pone un ID temporal único
+                    if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID')) {
                         i.ID = 'TMP_' + Math.random().toString(36).substring(2, 10);
                     }
                     return i;
@@ -304,6 +305,7 @@
                 const colorDinero = esFound ? '#4caf50' : '#d08c1b';
                 
                 let mostrarId = getId(i);
+                // Seguro de presentación para no mostrar IDs basura al usuario
                 if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
                 
                 return `<tr>
