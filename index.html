@@ -170,11 +170,10 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // Caza Lost: Independientes (CON SEGUROS ACTIVOS)
+                // Caza Lost: Independientes (CON SEGUROS ACTIVOS MODIFICADO)
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
-                    // Aquí está el seguro: si viene 'SIN_ID' desde la base de datos (nuestra nueva SQL), le pone un ID temporal único
-                    if(!id || id === 'null' || id === '' || id.startsWith('SIN_ID')) {
+                    if (!id || id === 'null' || id === '' || id === 'SIN_ID' || id.startsWith('SIN_ID')) {
                         i.ID = 'TMP_' + Math.random().toString(36).substring(2, 10);
                     }
                     return i;
