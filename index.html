@@ -218,22 +218,23 @@
             .then(data => {
                 const rawTMWH = [], rawCaza = [], rawWMS = [];
 
-                // CLASIFICACIÓN ESTRICTA DE LAS 3 SECCIONES
+                // CLASIFICACIÓN CORREGIDA Y AISLADA DE LAS 3 SECCIONES
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
                     
-                    if (proc === 'FOUND WMS DIRECTO') {
-                        // Sección 3: Movimientos WMS
-                        rawWMS.push(item);
-                    } else if (proc.startsWith('CAZA')) {
-                        // Sección 2: Caza Lost (App)
+                    if (proc.startsWith('CAZA')) {
+                        // SECCIÓN 2: Exclusivo App Caza Lost
                         rawCaza.push(item);
+
                         // Si además fue FOUND, también lo sumamos al acumulado total de la Sección 3
                         if (proc.includes('FOUND')) {
                             rawWMS.push(item);
                         }
+                    } else if (proc === 'FOUND WMS DIRECTO') {
+                        // SECCIÓN 3: Exclusivo Founds Directos WMS / Pending (NO entra a Caza Lost)
+                        rawWMS.push(item);
                     } else {
-                        // Sección 1: Auditoría TMWH
+                        // SECCIÓN 1: Auditoría TMWH
                         rawTMWH.push(item);
                     }
                 });
@@ -249,7 +250,7 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // Caza Lost: Independientes
+                // Caza Lost: Independientes (Solo App Caza)
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
                     if (!id || id === 'null' || id === '' || id === 'SIN_ID' || id.startsWith('SIN_ID')) {
