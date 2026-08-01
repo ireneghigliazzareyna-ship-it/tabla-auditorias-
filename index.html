@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard TMWH & Caza Lost</title>
+    <title>Dashboard TMWH, Caza Lost & WMS</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -144,7 +144,7 @@
     <!-- SECCIÓN 3: MOVIMIENTOS WMS (FOUNDS) - CELESTE CLARO -->
     <div id="panel-wms" style="display: none; background-color: var(--wms-bg); padding-bottom: 40px;">
         <div class="main-header header-wms">
-            <h1>Movimientos WMS - Founds</h1>
+            <h1>Movimientos WMS - Founds (Pending & Total)</h1>
             <span>TRANSACCIONES DIRECTAS DE STOCK EN SITE MXNL01</span>
         </div>
         <div class="module-wrapper">
@@ -216,13 +216,24 @@
         fetch('data.json?v=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
-                const rawTMWH = [], rawCaza = [];
+                const rawTMWH = [], rawCaza = [], rawWMS = [];
 
+                // CLASIFICACIÓN ESTRICTA DE LAS 3 SECCIONES
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
-                    if (proc.includes('CAZA')) {
+                    
+                    if (proc === 'FOUND WMS DIRECTO') {
+                        // Sección 3: Movimientos WMS
+                        rawWMS.push(item);
+                    } else if (proc.startsWith('CAZA')) {
+                        // Sección 2: Caza Lost (App)
                         rawCaza.push(item);
+                        // Si además fue FOUND, también lo sumamos al acumulado total de la Sección 3
+                        if (proc.includes('FOUND')) {
+                            rawWMS.push(item);
+                        }
                     } else {
+                        // Sección 1: Auditoría TMWH
                         rawTMWH.push(item);
                     }
                 });
@@ -247,8 +258,14 @@
                     return i;
                 });
 
-                // Filtrar datos para módulo 3 WMS (Sólo FOUNDS)
-                datosWMS = datosCaza.filter(i => getProceso(i).toUpperCase().includes('FOUND'));
+                // Movimientos WMS (Todos los Founds)
+                datosWMS = rawWMS.map(i => {
+                    let id = getId(i);
+                    if (!id || id === 'null' || id === '' || id === 'SIN_ID' || id.startsWith('SIN_ID')) {
+                        i.ID = 'TMP_' + Math.random().toString(36).substring(2, 10);
+                    }
+                    return i;
+                });
 
                 document.getElementById('status').style.display = 'none';
                 document.getElementById('panel-tmwh').style.display = 'block';
@@ -445,7 +462,7 @@
                 if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
                 return `<tr>
                     <td>${formFecha(i.FECHA_HORA)}</td>
-                    <td><strong style="color: #0288d1;">FOUND WMS</strong></td>
+                    <td><strong style="color: #0288d1;">${getProceso(i)}</strong></td>
                     <td>${getAuditor(i)}</td>
                     <td><code>${mostrarId}</code></td>
                     <td><strong style="color: #0288d1;">${formatearDinero(getMonto(i))}</strong></td>
