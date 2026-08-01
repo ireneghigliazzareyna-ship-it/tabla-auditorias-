@@ -1,151 +1,514 @@
-WITH mis_auditores AS (
-  SELECT 'araceli lara' AS auditor_nombre UNION ALL
-  SELECT 'adonay ramirezmacias' UNION ALL
-  SELECT 'andyalois mendez' UNION ALL
-  SELECT 'saul sanchezcantu' UNION ALL
-  SELECT 'rosa garciasilva' UNION ALL
-  SELECT 'blanca martinezblanco' UNION ALL
-  SELECT 'irene ghigliazzareyna' UNION ALL
-  SELECT 'brenda liraflores' UNION ALL
-  SELECT 'alejandra carrizalestorres' UNION ALL
-  SELECT 'montserrat covarrubias'
-),
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard TMWH, Caza Lost & WMS</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --tmwh-bg: #292d5c; --tmwh-card: #ffffff; --tmwh-text: #333333; --tmwh-accent: #ffc107;
+            --caza-bg: #fffbf2; --caza-header: #f5a623; --caza-dark: #d08c1b;
+            --wms-bg: #f0f8ff; --wms-header: #0288d1; --wms-dark: #01579b; --wms-accent: #e3f2fd;
+        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #eef1f6; color: #333; }
+        .module-wrapper { padding: 20px 30px; margin-bottom: 40px; }
+        .divider-bar { height: 8px; background: linear-gradient(90deg, var(--tmwh-bg) 33%, var(--caza-header) 33% 66%, var(--wms-header) 66%); width: 100%; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* HEADERS DE SECCIÓN */
+        .main-header { background-color: var(--tmwh-bg); color: white; padding: 15px 30px; display: flex; align-items: center; border-bottom: 4px solid var(--tmwh-accent); }
+        .main-header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
+        .main-header span { color: var(--tmwh-accent); font-weight: bold; font-size: 13px; margin-left: 10px; padding-top: 5px; }
+        
+        .header-caza { background-color: var(--caza-header); color: #222; border-bottom: 4px solid var(--caza-dark); }
+        .header-caza span { color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
+        
+        .header-wms { background-color: var(--wms-header); color: #fff; border-bottom: 4px solid var(--wms-dark); }
+        .header-wms span { color: #b3e5fc; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
 
-auditorias_unificadas AS (
-  -- 1. Tabla Maestra (TMWH MU / Procesos generales)
-  SELECT 
-    CAST(FECHA_HORA AS STRING) AS FECHA_HORA,
-    UPPER(TRIM(PROCESO)) AS PROCESO,
-    LOWER(TRIM(REPLACE(AUDITOR, '.', ' '))) AS AUDITOR,
-    CAST(ID AS STRING) AS ID,
-    0.0 AS MONTO,
-    COALESCE(
-      SAFE_CAST(FECHA_HORA AS TIMESTAMP),
-      SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S%Ez', CAST(FECHA_HORA AS STRING))
-    ) AS TS_FECHA
-  FROM `meli-bi-data.SBOX_LPDESA.BD_MAESTRA_AUDITORIAS_PI_OUT`
-  WHERE AUDITOR IS NOT NULL AND TRIM(AUDITOR) != '' AND PROCESO IS NOT NULL AND TRIM(PROCESO) != '' AND CAD = 'MXNL01'
+        /* FILTROS Y DROPDOWNS */
+        .filter-panel { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; }
+        .filter-group { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 6px; }
+        .filter-group label { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; }
+        .filter-group input, .filter-group select, .custom-select-header { padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; background-color: #f9fafb; outline: none; cursor: pointer; }
+        .custom-select-container { position: relative; user-select: none; }
+        .custom-select-header { display: flex; justify-content: space-between; align-items: center; }
+        .custom-select-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); margin-top: 5px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; flex-direction: column; }
+        .custom-select-list.show { display: flex; }
+        .checkbox-item { padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;}
+        .checkbox-item:hover { background-color: #f1f5f9; }
+        .checkbox-item.all-option { font-weight: bold; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; }
 
-  UNION ALL
+        /* DASHBOARD LAYOUT */
+        .dashboard-grid { display: grid; grid-template-columns: 260px 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .kpi-container { display: flex; flex-direction: column; gap: 15px; }
+        .kpi-card { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; border-left: 4px solid var(--tmwh-bg); flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .kpi-card.caza-style { border-left-color: var(--caza-header); }
+        .kpi-card.wms-style { border-left-color: var(--wms-header); }
+        .kpi-card .number { font-size: 32px; font-weight: bold; color: #333; }
+        .kpi-card .label { font-size: 11px; text-transform: uppercase; color: #777; margin-top: 5px; font-weight: 600;}
+        
+        .chart-card { background: white; padding: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: 280px; }
+        .chart-header { background-color: var(--tmwh-bg); color: white; padding: 8px 15px; margin: -15px -15px 15px -15px; border-radius: 4px 4px 0 0; font-size: 12px; text-transform: uppercase; text-align: center; font-weight: bold; }
+        .chart-header.caza-style { background-color: var(--caza-dark); }
+        .chart-header.wms-style { background-color: var(--wms-header); }
+        .chart-container { position: relative; height: 220px; width: 100%; }
+        
+        .table-container { background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-height: 400px; overflow-y: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background-color: var(--tmwh-bg); color: white; position: sticky; top: 0; padding: 12px 15px; text-align: left; z-index: 1; text-transform: uppercase; font-size: 11px; }
+        th.caza-style { background-color: var(--caza-header); color: #222; }
+        th.wms-style { background-color: var(--wms-header); color: #fff; }
+        td { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; color: #444; }
+        tr:nth-child(even) { background-color: #fafbfc; }
+        tr:hover { background-color: #f1f5f9; }
+    </style>
+</head>
+<body>
 
-  -- 2. Tabla Control 1P Ubicaciones
-  SELECT 
-    CAST(FECHA_HORA AS STRING) AS FECHA_HORA,
-    '1P UBICACIONES' AS PROCESO,
-    LOWER(TRIM(REPLACE(AUDITOR, '.', ' '))) AS AUDITOR,
-    CAST(ID AS STRING) AS ID,
-    0.0 AS MONTO,
-    COALESCE(
-      SAFE_CAST(FECHA_HORA AS TIMESTAMP),
-      SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S%Ez', CAST(FECHA_HORA AS STRING))
-    ) AS TS_FECHA
-  FROM `meli-bi-data.SBOX_LPDESA.LP_PI_RESULTADOS_CONTROL1P`
-  WHERE AUDITOR IS NOT NULL AND TRIM(AUDITOR) != '' AND CAD = 'MXNL01'
+    <div id="status" style="text-align: center; padding: 50px;">Cargando sistemas Mark VI...</div>
 
-  UNION ALL
+    <!-- SECCIÓN 1: TMWH -->
+    <div id="panel-tmwh" style="display: none;">
+        <div class="main-header">
+            <h1>Auditoría TMWH</h1>
+            <span>PI - PROCESS IMPROVEMENT | SITE MXNL01</span>
+        </div>
+        <div class="module-wrapper">
+            <div class="filter-panel">
+                <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio" onchange="filtrarDatos()"></div>
+                <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin" onchange="filtrarDatos()"></div>
+                <div class="filter-group"><label>Auditor</label><select id="select-auditor" onchange="filtrarDatos()"><option value="">Todos los auditores</option></select></div>
+                <div class="filter-group">
+                    <label>Proceso</label>
+                    <div class="custom-select-container" id="dropdown-container-tmwh">
+                        <div class="custom-select-header" onclick="toggleDropdown('dropdown-list-tmwh')"><span id="dropdown-text-tmwh">Todos los procesos</span><span>▼</span></div>
+                        <div class="custom-select-list" id="dropdown-list-tmwh"></div>
+                    </div>
+                </div>
+                <div class="filter-group"><label>Búsqueda ID</label><input type="text" id="search" placeholder="Escribe para buscar..." oninput="filtrarDatos()"></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="kpi-container"><div class="kpi-card"><div class="number" id="total-registros">0</div><div class="label">Auditorías Agrupadas (ID)</div></div></div>
+                <div class="chart-card"><div class="chart-header">Distribución por Hora</div><div class="chart-container"><canvas id="chartHoras"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header">Auditorías por Auditor</div><div class="chart-container"><canvas id="chartAuditores"></canvas></div></div>
+            </div>
+            <div class="table-container">
+                <table><thead><tr><th>Fecha / Hora</th><th>Proceso</th><th>Auditor</th><th>ID Transacción</th></tr></thead><tbody id="contenido"></tbody></table>
+            </div>
+        </div>
+    </div>
 
-  -- 3. Tabla Control 1P Checkin
-  SELECT 
-    CAST(FECHA_HORA AS STRING) AS FECHA_HORA,
-    UPPER(TRIM(COALESCE(PROCESO, '1P CHECKIN'))) AS PROCESO,
-    LOWER(TRIM(REPLACE(AUDITOR, '.', ' '))) AS AUDITOR,
-    CAST(ID AS STRING) AS ID,
-    0.0 AS MONTO,
-    COALESCE(
-      SAFE_CAST(FECHA_HORA AS TIMESTAMP),
-      SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S%Ez', CAST(FECHA_HORA AS STRING))
-    ) AS TS_FECHA
-  FROM `meli-bi-data.SBOX_LPDESA.LP_PI_RESULTADOS_CONTROL1P_CHECKIN`
-  WHERE AUDITOR IS NOT NULL AND TRIM(AUDITOR) != '' AND CAD = 'MXNL01'
+    <!-- DIVISOR 1 -->
+    <div class="divider-bar" id="divider" style="display: none;"></div>
 
-  UNION ALL
+    <!-- SECCIÓN 2: CAZA LOST -->
+    <div id="panel-caza" style="display: none; background-color: var(--caza-bg); padding-bottom: 20px;">
+        <div class="main-header header-caza">
+            <h1>Caza Lost</h1>
+            <span>RECUPERACIÓN DFL & FOUND | SITE MXNL01</span>
+        </div>
+        <div class="module-wrapper">
+            <div class="filter-panel">
+                <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio-caza" onchange="filtrarCaza()"></div>
+                <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin-caza" onchange="filtrarCaza()"></div>
+                <div class="filter-group"><label>Cazador (Auditor)</label><select id="select-auditor-caza" onchange="filtrarCaza()"><option value="">Todos los auditores</option></select></div>
+                <div class="filter-group">
+                    <label>Tipo Recuperación</label>
+                    <div class="custom-select-container" id="dropdown-container-caza">
+                        <div class="custom-select-header" onclick="toggleDropdown('dropdown-list-caza')"><span id="dropdown-text-caza">Todos los tipos</span><span>▼</span></div>
+                        <div class="custom-select-list" id="dropdown-list-caza"></div>
+                    </div>
+                </div>
+                <div class="filter-group"><label>Buscar LPN / Item</label><input type="text" id="search-caza" placeholder="Escribe para buscar..." oninput="filtrarCaza()"></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="kpi-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 15px;"><div class="number" id="kpi-found-count" style="font-size: 24px; color: #4caf50;">0</div><div class="label" style="font-size: 9px;">Recuperados (Founds)</div></div>
+                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 15px;"><div class="number" id="kpi-found-usd" style="font-size: 24px; color: #4caf50;">$0</div><div class="label" style="font-size: 9px;">Monto Recuperado</div></div>
+                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 15px;"><div class="number" id="kpi-dfl-count" style="font-size: 24px; color: #d08c1b;">0</div><div class="label" style="font-size: 9px;">Analizados (a DFL)</div></div>
+                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 15px;"><div class="number" id="kpi-dfl-usd" style="font-size: 24px; color: #d08c1b;">$0</div><div class="label" style="font-size: 9px;">Monto Analizado</div></div>
+                </div>
+                <div class="chart-card"><div class="chart-header caza-style">Casos: DFL vs Found</div><div class="chart-container"><canvas id="chartTipoCaza"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header caza-style">Monto por Auditor: Recuperado vs DFL</div><div class="chart-container"><canvas id="chartMontoCaza"></canvas></div></div>
+            </div>
+            <div class="table-container">
+                <table><thead><tr><th class="caza-style">Fecha / Hora</th><th class="caza-style">Resultado</th><th class="caza-style">Auditor LP</th><th class="caza-style">LPN / ID</th><th class="caza-style">Monto ($)</th></tr></thead><tbody id="contenido-caza"></tbody></table>
+            </div>
+        </div>
+    </div>
 
-  -- 4. Retiros IN
-  SELECT 
-    CAST(FECHA_HORA AS STRING) AS FECHA_HORA,
-    UPPER(TRIM(COALESCE(PROCESO, 'RETIROS IN'))) AS PROCESO,
-    LOWER(TRIM(REPLACE(AUDITOR, '.', ' '))) AS AUDITOR,
-    CAST(ID AS STRING) AS ID,
-    0.0 AS MONTO,
-    COALESCE(
-      SAFE_CAST(FECHA_HORA AS TIMESTAMP),
-      SAFE.PARSE_TIMESTAMP('%Y-%m-%d %H:%M:%E*S%Ez', CAST(FECHA_HORA AS STRING))
-    ) AS TS_FECHA
-  FROM `meli-bi-data.SBOX_LPDESA.BD_MAESTRA_AUDITORIAS_PI_RETIROS_IN`
-  WHERE AUDITOR IS NOT NULL AND TRIM(AUDITOR) != '' AND CAD = 'MXNL01'
+    <!-- DIVISOR 2 -->
+    <div class="divider-bar" id="divider-wms" style="display: none;"></div>
 
-  UNION ALL
+    <!-- SECCIÓN 3: MOVIMIENTOS WMS (FOUNDS) -->
+    <div id="panel-wms" style="display: none; background-color: var(--wms-bg); padding-bottom: 40px;">
+        <div class="main-header header-wms">
+            <h1>Movimientos WMS - Founds (Pending & Total)</h1>
+            <span>TRANSACCIONES DIRECTAS DE STOCK EN SITE MXNL01</span>
+        </div>
+        <div class="module-wrapper">
+            <div class="filter-panel">
+                <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio-wms" onchange="filtrarWMS()"></div>
+                <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin-wms" onchange="filtrarWMS()"></div>
+                <div class="filter-group"><label>Auditor WMS</label><select id="select-auditor-wms" onchange="filtrarWMS()"><option value="">Todos los auditores</option></select></div>
+                <div class="filter-group"><label>Buscar LPN / Item</label><input type="text" id="search-wms" placeholder="Buscar ítem / LPN..." oninput="filtrarWMS()"></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="kpi-container" style="display: flex; flex-direction: column; gap: 10px;">
+                    <div class="kpi-card wms-style"><div class="number" id="kpi-wms-count" style="color: var(--wms-header);">0</div><div class="label">Piezas Recuperadas (WMS)</div></div>
+                    <div class="kpi-card wms-style"><div class="number" id="kpi-wms-monto" style="color: var(--wms-header);">$0</div><div class="label">Monto Total Recuperado</div></div>
+                </div>
+                <div class="chart-card"><div class="chart-header wms-style">Distribución de Founds por Hora</div><div class="chart-container"><canvas id="chartHorasWMS"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header wms-style">Top Auditores: Founds WMS</div><div class="chart-container"><canvas id="chartAuditoresWMS"></canvas></div></div>
+            </div>
+            <div class="table-container">
+                <table><thead><tr><th class="wms-style">Fecha / Hora</th><th class="wms-style">Proceso</th><th class="wms-style">Auditor WMS</th><th class="wms-style">LPN / Item ID</th><th class="wms-style">Monto ($)</th></tr></thead><tbody id="contenido-wms"></tbody></table>
+            </div>
+        </div>
+    </div>
 
-  -- 5. CAZA LOST (LÓGICA EXACTA Y RIGUROSA: NO INFLA FOUNDS)
-  SELECT 
-    CAST(L.DATA_RESULTADO_ORIGEN AS STRING) AS FECHA_HORA,
-    CASE 
-      WHEN F.INVENTORY_ID IS NOT NULL THEN 'CAZA - FOUND'
-      ELSE 'CAZA - DFL'
-    END AS PROCESO,
-    LOWER(TRIM(REPLACE(
-      COALESCE(
-        NULLIF(TRIM(L.RESPONSAVEL_LP_ORIGEN), ''),
-        REP.NOME_DO_FUNCIONARIO
-      ), '.', ' '
-    ))) AS AUDITOR,
-    CAST(
-      CASE 
-        WHEN L.INVENTORY_ID IS NULL OR TRIM(L.INVENTORY_ID) = '' THEN 'SIN_ID'
-        ELSE UPPER(TRIM(L.INVENTORY_ID)) 
-      END AS STRING
-    ) AS ID,
-    CAST(COALESCE(L.PRECIO_USD, 0) AS FLOAT64) AS MONTO,
-    SAFE_CAST(L.DATA_RESULTADO_ORIGEN AS TIMESTAMP) AS TS_FECHA
-  FROM `meli-bi-data.WHOWNER.DM_LP_FBM_CAZA_LOST_TABLEAU` AS L
-  
-  -- Solo se marca FOUND si la tabla oficial de Founds de Caza Lost lo reconoce
-  LEFT JOIN (
-    SELECT DISTINCT 
-      UPPER(TRIM(INVENTORY_ID)) AS INVENTORY_ID
-    FROM `meli-bi-data.WHOWNER.DM_LP_FBM_CAZA_LOST_TABL_LP_FOUNDS`
-    WHERE INVENTORY_ID IS NOT NULL AND TRIM(INVENTORY_ID) != ''
-  ) AS F
-    ON UPPER(TRIM(L.INVENTORY_ID)) = F.INVENTORY_ID
-    AND UPPER(TRIM(L.INVENTORY_ID)) != ''
+    <!-- SCRIPT PRINCIPAL DE LÓGICA Y RENDERIZADO -->
+    <script>
+        let datosTMWH = [], datosCaza = [], datosWMS = [];
+        let procTMWH = [], procCaza = [];
+        let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasWMS, chartAuditoresWMS;
 
-  -- Rescate directo de nombre de auditor si en Caza viene el ID Meli
-  LEFT JOIN `meli-bi-data.SBOX_LPDESA.REPS_GR` AS REP
-    ON TRIM(L.RESPONSAVEL_LP_ORIGEN) = CAST(REP.ID_MELI AS STRING)
+        function getAuditor(i) { 
+            return (i.AUDITOR || i.USUARIO || 'Desconocido').trim().toLowerCase();
+        }
 
-  WHERE 
-    L.WAREHOUSE_ID = 'MXNL01'
-    AND COALESCE(
-      NULLIF(TRIM(L.RESPONSAVEL_LP_ORIGEN), ''),
-      REP.NOME_DO_FUNCIONARIO
-    ) IS NOT NULL
+        function getAuditorLimpio(i) {
+            let a = getAuditor(i);
+            return a.split('@')[0].replace(/\./g, ' ').trim();
+        }
 
-  UNION ALL
+        function getProceso(i) { return (i.PROCESO || i.proceso || '').trim(); }
+        function getId(i) { return i.ID || i.ID_TRANSACCION || ''; }
+        function getMonto(i) { return parseFloat(i.MONTO || 0); }
+        function formFecha(str) { return str ? str.replace('T', ' ').split('+')[0].split('.')[0] : ''; }
+        function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
-  -- 6. FOUNDS WMS DIRECTO (INVENTARIO Y MOVIMIENTOS PENDING/FOUND)
-  SELECT 
-    CAST(mov.FBM_CREATED_DATE AS STRING) AS FECHA_HORA,
-    'FOUND WMS DIRECTO' AS PROCESO,
-    LOWER(TRIM(REPLACE(rep.NOME_DO_FUNCIONARIO, '.', ' '))) AS AUDITOR,
-    CAST(UPPER(TRIM(mov.INVENTORY_ID)) AS STRING) AS ID,
-    0.0 AS MONTO,
-    SAFE_CAST(mov.FBM_CREATED_DATE AS TIMESTAMP) AS TS_FECHA
-  FROM `meli-bi-data.WHOWNER.BT_FBM_STOCK_3_MOVEMENT` AS mov
-  LEFT JOIN `meli-bi-data.SBOX_LPDESA.REPS_GR` AS rep
-    ON mov.FBM_USER_ID = rep.ID_MELI
-  WHERE mov.WAREHOUSE_ID = 'MXNL01'
-    AND LOWER(mov.FBM_REASON_PROCESS) = 'found'
-)
+        function toggleDropdown(id) { document.getElementById(id).classList.toggle('show'); }
+        document.addEventListener('click', e => {
+            ['dropdown-container-tmwh', 'dropdown-container-caza'].forEach(cId => {
+                const c = document.getElementById(cId);
+                const lId = cId.replace('container', 'list');
+                if (c && !c.contains(e.target)) document.getElementById(lId).classList.remove('show');
+            });
+        });
 
--- FILTRADO FINAL Y LIMPIDO POR LISTA BLANCA DE TUS 10 AUDITORES
-SELECT 
-  u.FECHA_HORA,
-  u.PROCESO,
-  u.AUDITOR,
-  u.ID,
-  u.MONTO
-FROM auditorias_unificadas u
-INNER JOIN mis_auditores ma
-  ON u.AUDITOR LIKE CONCAT('%', ma.auditor_nombre, '%')
-WHERE u.TS_FECHA >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 60 DAY)
-ORDER BY u.FECHA_HORA DESC;
+        function toggleSelectAll(tipo, el) {
+            const cls = tipo === 'TMWH' ? '.cb-tmwh' : '.cb-caza';
+            const checkboxes = document.querySelectorAll(cls);
+            checkboxes.forEach(cb => cb.checked = el.checked);
+            if(tipo === 'TMWH') actTMWH(); else actCaza();
+        }
+
+        function actTMWH() {
+            procTMWH = Array.from(document.querySelectorAll('.cb-tmwh:checked')).map(cb => cb.value);
+            const totalCB = document.querySelectorAll('.cb-tmwh').length;
+            const t = document.getElementById('dropdown-text-tmwh');
+            t.innerText = procTMWH.length === 0 ? 'Todos' : (procTMWH.length === totalCB ? 'Todos los procesos' : `${procTMWH.length} selec.`);
+            filtrarDatos();
+        }
+
+        function actCaza() {
+            procCaza = Array.from(document.querySelectorAll('.cb-caza:checked')).map(cb => cb.value);
+            const totalCB = document.querySelectorAll('.cb-caza').length;
+            const t = document.getElementById('dropdown-text-caza');
+            t.innerText = procCaza.length === 0 ? 'Todos' : (procCaza.length === totalCB ? 'Todos los tipos' : `${procCaza.length} selec.`);
+            filtrarCaza();
+        }
+
+        fetch('data.json?v=' + new Date().getTime())
+            .then(res => res.json())
+            .then(data => {
+                const rawTMWH = [], rawCaza = [], rawWMS = [];
+
+                // SEPARACIÓN ESTRICTA DE BUCKETS
+                data.forEach(item => {
+                    const proc = getProceso(item).toUpperCase();
+                    
+                    if (proc.startsWith('CAZA')) {
+                        rawCaza.push(item);
+                    } else if (proc === 'FOUND WMS DIRECTO') {
+                        rawWMS.push(item);
+                    } else {
+                        rawTMWH.push(item);
+                    }
+                });
+
+                // Agrupar TMWH
+                const agTMWH = {};
+                rawTMWH.forEach(i => {
+                    let id = getId(i);
+                    if(!id || id === 'null') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
+                    if(!agTMWH[id]) { agTMWH[id] = {...i, _p: new Set([getProceso(i)])}; }
+                    else { agTMWH[id]._p.add(getProceso(i)); }
+                });
+                datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
+
+                datosCaza = rawCaza.map(i => {
+                    let id = getId(i);
+                    if (!id || id === 'null' || id === '' || id === 'SIN_ID' || id.startsWith('SIN_ID')) {
+                        i.ID = 'TMP_' + Math.random().toString(36).substring(2, 10);
+                    }
+                    return i;
+                });
+
+                datosWMS = rawWMS.map(i => {
+                    let id = getId(i);
+                    if (!id || id === 'null' || id === '' || id === 'SIN_ID' || id.startsWith('SIN_ID')) {
+                        i.ID = 'TMP_' + Math.random().toString(36).substring(2, 10);
+                    }
+                    return i;
+                });
+
+                document.getElementById('status').style.display = 'none';
+                document.getElementById('panel-tmwh').style.display = 'block';
+                document.getElementById('divider').style.display = 'block';
+                document.getElementById('panel-caza').style.display = 'block';
+                document.getElementById('divider-wms').style.display = 'block';
+                document.getElementById('panel-wms').style.display = 'block';
+
+                poblarFiltros(datosTMWH, 'TMWH');
+                poblarFiltros(datosCaza, 'CAZA');
+                poblarFiltrosWMS(datosWMS);
+
+                filtrarDatos();
+                filtrarCaza();
+                filtrarWMS();
+            })
+            .catch(err => document.getElementById('status').innerText = 'Error: ' + err.message);
+
+        function poblarFiltros(data, tipo) {
+            const auditoresMap = new Map();
+            data.forEach(d => {
+                const limpio = getAuditorLimpio(d);
+                const original = getAuditor(d);
+                if (limpio && !auditoresMap.has(limpio)) {
+                    auditoresMap.set(limpio, original);
+                }
+            });
+
+            const setP = new Set();
+            data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
+            const procesos = [...setP].filter(Boolean).sort();
+
+            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
+            selAud.innerHTML = '<option value="">Todos los auditores</option>';
+            
+            Array.from(auditoresMap.keys()).sort().forEach(key => {
+                selAud.add(new Option(auditoresMap.get(key), key));
+            });
+
+            const list = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
+            const cbCls = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
+            const fn = tipo === 'TMWH' ? 'actTMWH()' : 'actCaza()';
+            
+            let htmlOptions = `<label class="checkbox-item all-option"><input type="checkbox" onchange="toggleSelectAll('${tipo}', this)">--- SELECCIONAR TODOS ---</label>`;
+            htmlOptions += procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
+            
+            list.innerHTML = htmlOptions;
+        }
+
+        function poblarFiltrosWMS(data) {
+            const auditoresMap = new Map();
+            data.forEach(d => {
+                const limpio = getAuditorLimpio(d);
+                const original = getAuditor(d);
+                if (limpio && !auditoresMap.has(limpio)) {
+                    auditoresMap.set(limpio, original);
+                }
+            });
+
+            const selAud = document.getElementById('select-auditor-wms');
+            selAud.innerHTML = '<option value="">Todos los auditores</option>';
+            Array.from(auditoresMap.keys()).sort().forEach(key => {
+                selAud.add(new Option(auditoresMap.get(key), key));
+            });
+        }
+
+        // LOGIC 1: TMWH
+        function filtrarDatos() {
+            const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
+            const audKey = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
+            
+            const res = datosTMWH.filter(d => {
+                const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
+                return (!fI || f >= fI) && (!fF || f <= fF) && 
+                       (!audKey || getAuditorLimpio(d) === audKey) &&
+                       (procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p))) &&
+                       (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+            });
+            
+            document.getElementById('total-registros').innerText = res.length.toLocaleString();
+            document.getElementById('contenido').innerHTML = res.length ? res.map(i => {
+                let mostrarId = getId(i);
+                if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
+                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td></tr>`;
+            }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
+            
+            graficarTMWH(res);
+        }
+
+        function graficarTMWH(lista) {
+            const hC = Array(24).fill(0);
+            lista.forEach(i => { if(i.FECHA_HORA) { const h = parseInt(i.FECHA_HORA.includes('T') ? i.FECHA_HORA.split('T')[1] : i.FECHA_HORA.split(' ')[1]); if(!isNaN(h)) hC[h]++; } });
+            if(chartHoras) chartHoras.destroy();
+            chartHoras = new Chart(document.getElementById('chartHoras').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#292d5c', backgroundColor: 'rgba(41, 45, 92, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+
+            const audSeleccionado = document.getElementById('select-auditor').value;
+            const tituloGrafica = document.getElementById('chartAuditores').parentElement.previousElementSibling;
+            
+            let labelsBarra = [], dataBarra = [];
+
+            if (audSeleccionado) {
+                tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.toUpperCase();
+                const pC = {}; 
+                lista.forEach(i => { 
+                    getProceso(i).split('+').forEach(p => {
+                        let nombreProceso = p.trim();
+                        if (nombreProceso) pC[nombreProceso] = (pC[nombreProceso] || 0) + 1;
+                    });
+                });
+                labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]);
+                dataBarra = labelsBarra.map(p=>pC[p]);
+            } else {
+                tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
+                const aC = {}; 
+                lista.forEach(i => { let a = getAuditorLimpio(i); aC[a] = (aC[a]||0)+1; });
+                labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
+                dataBarra = labelsBarra.map(a=>aC[a]);
+            }
+
+            if(chartAuditores) chartAuditores.destroy();
+            chartAuditores = new Chart(document.getElementById('chartAuditores').getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+        }
+
+        // LOGIC 2: CAZA LOST
+        function filtrarCaza() {
+            const fI = document.getElementById('fecha-inicio-caza').value, fF = document.getElementById('fecha-fin-caza').value;
+            const audKey = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
+            
+            let countFound = 0, sumFound = 0, countDfl = 0, sumDfl = 0;
+
+            const res = datosCaza.filter(d => {
+                const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
+                const match = (!fI || f >= fI) && (!fF || f <= fF) && 
+                              (!audKey || getAuditorLimpio(d) === audKey) &&
+                              (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
+                              (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+                
+                if (match) {
+                    const proc = getProceso(d).toUpperCase();
+                    if (proc.includes('FOUND')) { countFound++; sumFound += getMonto(d); } 
+                    else { countDfl++; sumDfl += getMonto(d); }
+                }
+                return match;
+            });
+            
+            document.getElementById('kpi-found-count').innerText = countFound.toLocaleString();
+            document.getElementById('kpi-found-usd').innerText = formatearDinero(sumFound);
+            document.getElementById('kpi-dfl-count').innerText = countDfl.toLocaleString();
+            document.getElementById('kpi-dfl-usd').innerText = formatearDinero(sumDfl);
+
+            document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
+                const esFound = getProceso(i).toUpperCase().includes('FOUND');
+                const colorDinero = esFound ? '#4caf50' : '#d08c1b';
+                let mostrarId = getId(i);
+                if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
+                
+                return `<tr>
+                    <td>${formFecha(i.FECHA_HORA)}</td>
+                    <td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td>
+                    <td>${getAuditor(i)}</td>
+                    <td><code>${mostrarId}</code></td>
+                    <td><strong style="color: ${colorDinero}">${formatearDinero(getMonto(i))}</strong></td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
+            
+            graficarCaza(res);
+        }
+
+        function graficarCaza(lista) {
+            const tC = {}; lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
+            if(chartTipoCaza) chartTipoCaza.destroy();
+            chartTipoCaza = new Chart(document.getElementById('chartTipoCaza').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
+
+            const auditoresObj = {};
+            lista.forEach(i => { 
+                let a = getAuditorLimpio(i); 
+                let monto = getMonto(i);
+                let esFound = getProceso(i).toUpperCase().includes('FOUND');
+                
+                if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
+                if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
+                auditoresObj[a].total += monto;
+            });
+            
+            const as = Object.keys(auditoresObj).sort((a,b) => auditoresObj[b].total - auditoresObj[a].total);
+            const dataFound = as.map(a => auditoresObj[a].found);
+            const dataDfl = as.map(a => auditoresObj[a].dfl);
+
+            if(chartMontoCaza) chartMontoCaza.destroy();
+            chartMontoCaza = new Chart(document.getElementById('chartMontoCaza').getContext('2d'), { 
+                type: 'bar', 
+                data: { labels: as, datasets: [ { label: 'Recuperado (Found)', data: dataFound, backgroundColor: '#4caf50', borderRadius: 2 }, { label: 'Analizado (DFL)', data: dataDfl, backgroundColor: '#d08c1b', borderRadius: 2 } ] }, 
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }, scales: { x: { stacked: true }, y: { stacked: true } } }
+            });
+        }
+
+        // LOGIC 3: MOVIMIENTOS WMS (CELESTE CLARO)
+        function filtrarWMS() {
+            const fI = document.getElementById('fecha-inicio-wms').value, fF = document.getElementById('fecha-fin-wms').value;
+            const audKey = document.getElementById('select-auditor-wms').value, txt = document.getElementById('search-wms').value.toLowerCase();
+            
+            let totalMonto = 0;
+
+            const res = datosWMS.filter(d => {
+                const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
+                const match = (!fI || f >= fI) && (!fF || f <= fF) && 
+                              (!audKey || getAuditorLimpio(d) === audKey) &&
+                              (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+            
+                if (match) { totalMonto += getMonto(d); }
+                return match;
+            });
+
+            document.getElementById('kpi-wms-count').innerText = res.length.toLocaleString();
+            document.getElementById('kpi-wms-monto').innerText = formatearDinero(totalMonto);
+
+            document.getElementById('contenido-wms').innerHTML = res.length ? res.map(i => {
+                let mostrarId = getId(i);
+                if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
+                return `<tr>
+                    <td>${formFecha(i.FECHA_HORA)}</td>
+                    <td><strong style="color: #0288d1;">${getProceso(i)}</strong></td>
+                    <td>${getAuditor(i)}</td>
+                    <td><code>${mostrarId}</code></td>
+                    <td><strong style="color: #0288d1;">${formatearDinero(getMonto(i))}</strong></td>
+                </tr>`;
+            }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
+
+            graficarWMS(res);
+        }
+
+        function graficarWMS(lista) {
+            const hC = Array(24).fill(0);
+            lista.forEach(i => { if(i.FECHA_HORA) { const h = parseInt(i.FECHA_HORA.includes('T') ? i.FECHA_HORA.split('T')[1] : i.FECHA_HORA.split(' ')[1]); if(!isNaN(h)) hC[h]++; } });
+            if(chartHorasWMS) chartHorasWMS.destroy();
+            chartHorasWMS = new Chart(document.getElementById('chartHorasWMS').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#0288d1', backgroundColor: 'rgba(2, 136, 209, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+
+            const aC = {}; 
+            lista.forEach(i => { let a = getAuditorLimpio(i); aC[a] = (aC[a]||0)+1; });
+            const labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
+            const dataBarra = labelsBarra.map(a=>aC[a]);
+
+            if(chartAuditoresWMS) chartAuditoresWMS.destroy();
+            chartAuditoresWMS = new Chart(document.getElementById('chartAuditoresWMS').getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#0288d1', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+        }
+    </script>
+</body>
+</html>
