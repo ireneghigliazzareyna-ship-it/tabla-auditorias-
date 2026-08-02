@@ -465,6 +465,12 @@
         function formFecha(str) { return str ? String(str).replace('T', ' ').split('+')[0].split('.')[0] : ''; }
         function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
+        // IDENTIFICADOR DE FOUND EXCLUSIVO PARA CAZA LOST (SE IGNORA FOUND INV)
+        function esResultadofound(p) {
+            const str = String(p).toUpperCase();
+            return str.includes('FOUND LP') || (str.includes('FOUND') && !str.includes('FOUND INV'));
+        }
+
         function toggleDropdown(id) { document.getElementById(id).classList.toggle('show'); }
         document.addEventListener('click', e => {
             ['dropdown-container-tmwh', 'dropdown-container-caza'].forEach(cId => {
@@ -497,7 +503,7 @@
             filtrarCaza();
         }
 
-        // CARGA Y CLASIFICACIÓN ESTRICTA
+        // CARGA Y CLASIFICACIÓN CON EXCLUSIÓN DE FOUND INV
         fetch('data.json?v=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
@@ -510,12 +516,12 @@
                     if (proc === 'FOUND GENERAL WMS' || proc === 'GENERAL WMS FOUND') {
                         rawFG.push(item);
                     } 
-                    // 2. Caza Lost estricto
-                    else if (proc.startsWith('CAZA') || proc.includes('DFL') || proc.includes('RESCATE')) {
+                    // 2. Caza Lost estricto (EXCLUYE TOTALMENTE FOUND INV)
+                    else if ((proc.includes('CAZA') || proc.includes('FOUND LP') || proc.includes('DFL')) && !proc.includes('FOUND INV')) {
                         rawCaza.push(item);
                     } 
-                    // 3. TMWH convencional
-                    else {
+                    // 3. TMWH convencional (también se ignora si viniera FOUND INV puro que no aplica)
+                    else if (!proc.includes('FOUND INV')) {
                         rawTMWH.push(item);
                     }
                 });
@@ -584,7 +590,7 @@
             }
         }
 
-        // --- LÓGICA SECCIÓN 1: TMWH (CORREGIDA LA GRÁFICA DE AUDITORES/PROCESOS) ---
+        // --- LÓGICA SECCIÓN 1: TMWH ---
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio')?.value, fF = document.getElementById('fecha-fin')?.value;
             const aud = document.getElementById('select-auditor')?.value, txt = document.getElementById('search')?.value.toLowerCase();
@@ -679,8 +685,13 @@
                               (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
                 
                 if (match) {
-                    if (getProceso(d).toUpperCase().includes('FOUND')) { countFound++; sumFound += getMonto(d); }
-                    else { countDfl++; sumDfl += getMonto(d); }
+                    if (esResultadofound(getProceso(d))) { 
+                        countFound++; 
+                        sumFound += getMonto(d); 
+                    } else { 
+                        countDfl++; 
+                        sumDfl += getMonto(d); 
+                    }
                 }
                 return match;
             });
@@ -691,7 +702,7 @@
             document.getElementById('kpi-dfl-usd').innerText = formatearDinero(sumDfl);
 
             document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
-                const esFound = getProceso(i).toUpperCase().includes('FOUND');
+                const esFound = esResultadofound(getProceso(i));
                 let mostrarId = getId(i); if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
                 return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td><td><strong style="color: ${esFound ? '#4caf50' : '#d08c1b'}">${formatearDinero(getMonto(i))}</strong></td></tr>`;
             }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
@@ -700,14 +711,19 @@
         }
 
         function graficarCaza(lista) {
-            const tC = {}; lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
+            const tC = {}; 
+            lista.forEach(i => { 
+                let p = getProceso(i).replace('CAZA - ',''); 
+                tC[p] = (tC[p]||0)+1; 
+            });
+            
             if(chartTipoCaza) chartTipoCaza.destroy();
             const canvasTC = document.getElementById('chartTipoCaza');
             if(canvasTC) chartTipoCaza = new Chart(canvasTC.getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
 
             const auditoresObj = {};
             lista.forEach(i => { 
-                let a = getAuditorLimpio(i), monto = getMonto(i), esFound = getProceso(i).toUpperCase().includes('FOUND');
+                let a = getAuditorLimpio(i), monto = getMonto(i), esFound = esResultadofound(getProceso(i));
                 if (a && a !== 'Desconocido') {
                     if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
                     if (esFound) auditoresObj[a].found += monto; else auditoresObj[a].dfl += monto;
