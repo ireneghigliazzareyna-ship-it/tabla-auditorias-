@@ -1,170 +1,30 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard PI - TMWH, Caza Lost & Founds Generales</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root {
-            --tmwh-bg: #292d5c; --tmwh-card: #ffffff; --tmwh-text: #333333; --tmwh-accent: #ffc107;
-            --caza-bg: #fffbf2; --caza-header: #f5a623; --caza-dark: #d08c1b;
-            --fg-bg: #f0f7ff; --fg-header: #0284c7; --fg-dark: #0369a1; --fg-accent: #38bdf8;
-        }
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #eef1f6; color: #333; }
-        .module-wrapper { padding: 20px 30px; margin-bottom: 20px; }
-        
-        /* Barras Divisoras */
-        .divider-bar { height: 6px; background: linear-gradient(90deg, var(--tmwh-bg) 33%, var(--caza-header) 33% 66%, var(--fg-header) 66%); width: 100%; margin: 10px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        
-        /* Headers */
-        .main-header { background-color: var(--tmwh-bg); color: white; padding: 15px 30px; display: flex; align-items: center; border-bottom: 4px solid var(--tmwh-accent); }
-        .main-header h1 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
-        .main-header span { color: var(--tmwh-accent); font-weight: bold; font-size: 12px; margin-left: 10px; padding-top: 3px; }
-        
-        .header-caza { background-color: var(--caza-header); color: #222; border-bottom: 4px solid var(--caza-dark); }
-        .header-caza span { color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
-
-        .header-fg { background-color: var(--fg-header); color: #fff; border-bottom: 4px solid var(--fg-dark); }
-        .header-fg span { color: var(--fg-accent); }
-
-        /* Filtros */
-        .filter-panel { background: white; padding: 15px 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 15px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; }
-        .filter-group { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 4px; }
-        .filter-group label { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; }
-        .filter-group input, .filter-group select, .custom-select-header { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; background-color: #f9fafb; outline: none; cursor: pointer; }
-        
-        .custom-select-container { position: relative; user-select: none; }
-        .custom-select-header { display: flex; justify-content: space-between; align-items: center; }
-        .custom-select-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); margin-top: 5px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; flex-direction: column; }
-        .custom-select-list.show { display: flex; }
-        .checkbox-item { padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;}
-        .checkbox-item:hover { background-color: #f1f5f9; }
-        .checkbox-item.all-option { font-weight: bold; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; }
-
-        /* Grid Dashboard */
-        .dashboard-grid { display: grid; grid-template-columns: 260px 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .kpi-container { display: flex; flex-direction: column; gap: 15px; }
-        .kpi-card { background: white; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; border-left: 5px solid var(--tmwh-bg); flex: 1; display: flex; flex-direction: column; justify-content: center; }
-        .kpi-card.caza-style { border-left-color: var(--caza-header); }
-        .kpi-card.fg-style { border-left-color: var(--fg-header); }
-        .kpi-card .number { font-size: 30px; font-weight: bold; color: #333; }
-        .kpi-card .label { font-size: 11px; text-transform: uppercase; color: #666; margin-top: 5px; font-weight: 600;}
-
-        /* Charts */
-        .chart-card { background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: 260px; }
-        .chart-header { background-color: var(--tmwh-bg); color: white; padding: 8px 15px; margin: -15px -15px 15px -15px; border-radius: 6px 6px 0 0; font-size: 11px; text-transform: uppercase; text-align: center; font-weight: bold; }
-        .chart-header.caza-style { background-color: var(--caza-dark); }
-        .chart-header.fg-style { background-color: var(--fg-dark); }
-        .chart-container { position: relative; height: 200px; width: 100%; }
-
-        /* Tablas */
-        .table-container { background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-height: 380px; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background-color: var(--tmwh-bg); color: white; position: sticky; top: 0; padding: 10px 15px; text-align: left; z-index: 1; text-transform: uppercase; font-size: 11px; }
-        th.caza-style { background-color: var(--caza-header); color: #222; }
-        th.fg-style { background-color: var(--fg-header); color: #fff; }
-        td { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; color: #444; }
-        tr:nth-child(even) { background-color: #fafbfc; }
-        tr:hover { background-color: #f1f5f9; }
-    </style>
-</head>
-<body>
-
-    <div id="status" style="text-align: center; padding: 50px; font-size: 18px; font-weight: bold; color: #555;">Cargando sistemas Mark VI...</div>
-
-    <!-- SECCIÓN 1: TMWH -->
-    <div id="panel-tmwh" style="display: none;">
-        <div class="main-header">
-            <h1>Auditoría TMWH</h1>
-            <span>PI - PROCESS IMPROVEMENT | SITE MXNL01</span>
-        </div>
-        <div class="module-wrapper">
-            <div class="filter-panel">
-                <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio" onchange="filtrarDatos()"></div>
-                <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin" onchange="filtrarDatos()"></div>
-                <div class="filter-group"><label>Auditor</label><select id="select-auditor" onchange="filtrarDatos()"><option value="">Todos los auditores</option></select></div>
-                <div class="filter-group"><label>Proceso</label><div class="custom-select-container" id="dropdown-container-tmwh"><div class="custom-select-header" onclick="toggleDropdown('dropdown-list-tmwh')"><span id="dropdown-text-tmwh">Todos los procesos</span><span>▼</span></div><div class="custom-select-list" id="dropdown-list-tmwh"></div></div></div>
-                <div class="filter-group"><label>Búsqueda ID</label><input type="text" id="search" placeholder="Escribe para buscar..." oninput="filtrarDatos()"></div>
-            </div>
-            <div class="dashboard-grid">
-                <div class="kpi-container"><div class="kpi-card"><div class="number" id="total-registros">0</div><div class="label">Auditorías Agrupadas (ID)</div></div></div>
-                <div class="chart-card"><div class="chart-header">Distribución por Hora</div><div class="chart-container"><canvas id="chartHoras"></canvas></div></div>
-                <div class="chart-card"><div class="chart-header" id="titulo-chart-auditores">Auditorías por Auditor</div><div class="chart-container"><canvas id="chartAuditores"></canvas></div></div>
-            </div>
-            <div class="table-container">
-                <table><thead><tr><th>Fecha / Hora</th><th>Proceso</th><th>Auditor</th><th>ID Transacción</th></tr></thead><tbody id="contenido"></tbody></table>
-            </div>
-        </div>
-    </div>
-
-    <div class="divider-bar" id="divider1" style="display: none;"></div>
-
-    <!-- SECCIÓN 2: CAZA LOST -->
-    <div id="panel-caza" style="display: none; background-color: var(--caza-bg);">
-        <div class="main-header header-caza">
-            <h1>Caza Lost</h1>
-            <span>RECUPERACIÓN DFL & FOUND | SITE MXNL01</span>
-        </div>
-        <div class="module-wrapper">
-            <div class="filter-panel">
-                <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio-caza" onchange="filtrarCaza()"></div>
-                <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin-caza" onchange="filtrarCaza()"></div>
-                <div class="filter-group"><label>Cazador (Auditor)</label><select id="select-auditor-caza" onchange="filtrarCaza()"><option value="">Todos los auditores</option></select></div>
-                <div class="filter-group"><label>Tipo Recuperación</label><div class="custom-select-container" id="dropdown-container-caza"><div class="custom-select-header" onclick="toggleDropdown('dropdown-list-caza')"><span id="dropdown-text-caza">Todos los tipos</span><span>▼</span></div><div class="custom-select-list" id="dropdown-list-caza"></div></div></div>
-                <div class="filter-group"><label>Buscar LPN / Item</label><input type="text" id="search-caza" placeholder="Escribe para buscar..." oninput="filtrarCaza()"></div>
-            </div>
-            <div class="dashboard-grid">
-                <div class="kpi-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 10px;"><div class="number" id="kpi-found-count" style="font-size: 22px; color: #4caf50;">0</div><div class="label" style="font-size: 9px;">Recuperados (Founds)</div></div>
-                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 10px;"><div class="number" id="kpi-found-usd" style="font-size: 20px; color: #4caf50;">$0</div><div class="label" style="font-size: 9px;">Monto Recuperado</div></div>
-                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 10px;"><div class="number" id="kpi-dfl-count" style="font-size: 22px; color: #d08c1b;">0</div><div class="label" style="font-size: 9px;">Analizados (a DFL)</div></div>
-                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 10px;"><div class="number" id="kpi-dfl-usd" style="font-size: 20px; color: #d08c1b;">$0</div><div class="label" style="font-size: 9px;">Monto Analizado</div></div>
-                </div>
-                <div class="chart-card"><div class="chart-header caza-style">Casos: DFL vs Found</div><div class="chart-container"><canvas id="chartTipoCaza"></canvas></div></div>
-                <div class="chart-card"><div class="chart-header caza-style">Monto por Auditor: Recuperado vs DFL</div><div class="chart-container"><canvas id="chartMontoCaza"></canvas></div></div>
-            </div>
-            <div class="table-container">
-                <table><thead><tr><th class="caza-style">Fecha / Hora</th><th class="caza-style">Resultado</th><th class="caza-style">Auditor LP</th><th class="caza-style">LPN / ID</th><th class="caza-style">Monto ($)</th></tr></thead><tbody id="contenido-caza"></tbody></table>
-            </div>
-        </div>
-    </div>
-
-    <div class="divider-bar" id="divider2" style="display: none;"></div>
-
-    <!-- SECCIÓN 3: FOUNDS GENERALES WMS -->
-    <div id="panel-fg" style="display: none; background-color: var(--fg-bg); padding-bottom: 40px;">
-        <div class="main-header header-fg">
-            <h1>Founds Generales WMS</h1>
-            <span>HALLAZGOS DIRECTOS FUERA DE CAZA LOST | SITE MXNL01</span>
-        </div>
-        <div class="module-wrapper">
-            <div class="filter-panel">
-                <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio-fg" onchange="filtrarFG()"></div>
-                <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin-fg" onchange="filtrarFG()"></div>
-                <div class="filter-group"><label>Auditor WMS</label><select id="select-auditor-fg" onchange="filtrarFG()"><option value="">Todos los auditores</option></select></div>
-                <div class="filter-group"><label>Buscar ID / Inventory</label><input type="text" id="search-fg" placeholder="Escribe para buscar..." oninput="filtrarFG()"></div>
-            </div>
-            <div class="dashboard-grid">
-                <div class="kpi-container">
-                    <div class="kpi-card fg-style"><div class="number" id="kpi-fg-count" style="color: var(--fg-header);">0</div><div class="label">Total Founds Generales</div></div>
-                </div>
-                <div class="chart-card"><div class="chart-header fg-style">Founds Generales por Hora</div><div class="chart-container"><canvas id="chartHorasFG"></canvas></div></div>
-                <div class="chart-card"><div class="chart-header fg-style">Top Auditores (Founds Generales)</div><div class="chart-container"><canvas id="chartAuditoresFG"></canvas></div></div>
-            </div>
-            <div class="table-container">
-                <table><thead><tr><th class="fg-style">Fecha / Hora</th><th class="fg-style">Proceso</th><th class="fg-style">Auditor WMS</th><th class="fg-style">ID Transacción</th></tr></thead><tbody id="contenido-fg"></tbody></table>
-            </div>
-        </div>
-    </div>
-
-    <script>
+<script>
         let datosTMWH = [], datosCaza = [], datosFG = [];
         let procTMWH = [], procCaza = [];
         let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
 
-        function getAuditor(i) { let a = i.AUDITOR || i.auditor || i.USUARIO || 'Desconocido'; return String(a).trim(); }
-        function getAuditorLimpio(i) { return getAuditor(i).split('@')[0].trim(); }
+        // NORMALIZACIÓN DE AUDITORES (CORREGIDO PARA CORREOS, PUNTOS Y APELLIDOS COMPUESTOS)
+        function getAuditor(i) { 
+            let a = i.AUDITOR || i.auditor || i.USUARIO || 'Desconocido';
+            let str = String(a).toLowerCase().trim();
+            
+            if (str.includes('@')) {
+                str = str.split('@')[0];
+            }
+            
+            str = str.replace(/\./g, ' ').trim();
+            
+            if (str.includes('irene') && str.includes('ghigliazza')) {
+                return 'irene ghigliazzareyna';
+            }
+            
+            return str;
+        }
+
+        function getAuditorLimpio(i) { 
+            return getAuditor(i); 
+        }
+
         function getProceso(i) { return String(i.PROCESO || i.proceso || '').trim(); }
         function getId(i) { return String(i.ID || i.id || ''); }
         function getMonto(i) { return parseFloat(i.MONTO || i.monto || 0) || 0; }
@@ -301,7 +161,7 @@
             const audSel = document.getElementById('select-auditor').value;
             let labelsBarra = [], dataBarra = [];
             if (audSel) {
-                document.getElementById('titulo-chart-auditores').innerText = 'PROCESOS DE: ' + audSel.split('@')[0].toUpperCase();
+                document.getElementById('titulo-chart-auditores').innerText = 'PROCESOS DE: ' + audSel.toUpperCase();
                 const pC = {}; lista.forEach(i => getProceso(i).split('+').forEach(p => { let n = p.trim(); if(n) pC[n] = (pC[n]||0)+1; }));
                 labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]); dataBarra = labelsBarra.map(p=>pC[p]);
             } else {
@@ -405,5 +265,3 @@
             chartAuditoresFG = new Chart(document.getElementById('chartAuditoresFG').getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#38bdf8', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
         }
     </script>
-</body>
-</html>
