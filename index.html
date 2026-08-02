@@ -69,7 +69,7 @@
             <div class="dashboard-grid">
                 <div class="kpi-container"><div class="kpi-card"><div class="number" id="total-registros">0</div><div class="label">Auditorías Agrupadas (ID)</div></div></div>
                 <div class="chart-card"><div class="chart-header">Distribución por Hora</div><div class="chart-container"><canvas id="chartHoras"></canvas></div></div>
-                <div class="chart-card"><div class="chart-header">Auditorías por Auditor</div><div class="chart-container"><canvas id="chartAuditores"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header" id="titulo-chart-auditores">Auditorías por Auditor</div><div class="chart-container"><canvas id="chartAuditores"></canvas></div></div>
             </div>
             <div class="table-container">
                 <table><thead><tr><th>Fecha / Hora</th><th>Proceso</th><th>Auditor</th><th>ID Transacción</th></tr></thead><tbody id="contenido"></tbody></table>
@@ -115,11 +115,21 @@
         let procTMWH = [], procCaza = [];
         let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza;
 
-        function getAuditor(i) { return (i.AUDITOR || i.USUARIO || 'Desconocido').trim(); }
-        function getProceso(i) { return (i.PROCESO || i.proceso || '').trim(); }
-        function getId(i) { return i.ID || i.ID_TRANSACCION || ''; }
-        function getMonto(i) { return parseFloat(i.MONTO || 0); }
-        function formFecha(str) { return str ? str.replace('T', ' ').split('+')[0].split('.')[0] : ''; }
+        // Normalizador de Auditor Seguro
+        function getAuditor(i) { 
+            let a = i.AUDITOR || i.auditor || i.USUARIO || 'Desconocido';
+            return String(a).trim();
+        }
+
+        function getAuditorLimpio(i) {
+            let a = getAuditor(i);
+            return a.split('@')[0].trim();
+        }
+
+        function getProceso(i) { return String(i.PROCESO || i.proceso || '').trim(); }
+        function getId(i) { return String(i.ID || i.id || ''); }
+        function getMonto(i) { return parseFloat(i.MONTO || i.monto || 0) || 0; }
+        function formFecha(str) { return str ? String(str).replace('T', ' ').split('+')[0].split('.')[0] : ''; }
         function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
         function toggleDropdown(id) { document.getElementById(id).classList.toggle('show'); }
@@ -131,7 +141,7 @@
             });
         });
 
-        // SELECCIONAR / DESELECCIONAR TODOS
+        // SELECCIONAR / DESELECCIONAR TODOS SEGURO
         function toggleSelectAll(tipo, el) {
             const cls = tipo === 'TMWH' ? '.cb-tmwh' : '.cb-caza';
             const checkboxes = document.querySelectorAll(cls);
@@ -169,11 +179,11 @@
                     }
                 });
 
-                // Agrupar TMWH
+                // Agrupar TMWH por ID
                 const agTMWH = {};
                 rawTMWH.forEach(i => {
                     let id = getId(i);
-                    if(!id || id === 'null') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
+                    if(!id || id === 'null' || id === 'SIN_ID') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
                     
                     if(!agTMWH[id]) { agTMWH[id] = {...i, _p: new Set([getProceso(i)])}; }
                     else { agTMWH[id]._p.add(getProceso(i)); }
@@ -183,8 +193,8 @@
                 // Caza Lost: Registros directos
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
-                    if (!id || id === 'null' || id === '' || id === 'SIN_ID' || id.startsWith('SIN_ID')) {
-                        i.ID = 'TMP_' + Math.random().toString(36).substring(2, 10);
+                    if (!id || id === 'null' || id === '' || id === 'SIN_ID') {
+                        i.ID = 'SIN ID ASIGNADO';
                     }
                     return i;
                 });
@@ -199,7 +209,7 @@
                 filtrarDatos();
                 filtrarCaza();
             })
-            .catch(err => document.getElementById('status').innerText = 'Error: ' + err.message);
+            .catch(err => document.getElementById('status').innerText = 'Error al cargar data.json: ' + err.message);
 
         function poblarFiltros(data, tipo) {
             const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
@@ -225,11 +235,14 @@
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
             const aud = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
+            
             const res = datosTMWH.filter(d => {
-                const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                       (procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p))) &&
-                       (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+                const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
+                const matchFecha = (!fI || f >= fI) && (!fF || f <= fF);
+                const matchAud = !aud || getAuditor(d) === aud;
+                const matchProc = procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p));
+                const matchTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
+                return matchFecha && matchAud && matchProc && matchTxt;
             });
             
             document.getElementById('total-registros').innerText = res.length.toLocaleString();
@@ -245,15 +258,21 @@
 
         function graficarTMWH(lista) {
             const hC = Array(24).fill(0);
-            lista.forEach(i => { if(i.FECHA_HORA) { const h = parseInt(i.FECHA_HORA.includes('T') ? i.FECHA_HORA.split('T')[1] : i.FECHA_HORA.split(' ')[1]); if(!isNaN(h)) hC[h]++; } });
+            lista.forEach(i => { 
+                if(i.FECHA_HORA) { 
+                    const str = String(i.FECHA_HORA);
+                    const h = parseInt(str.includes('T') ? str.split('T')[1] : str.split(' ')[1]); 
+                    if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
+                } 
+            });
+
             if(chartHoras) chartHoras.destroy();
             chartHoras = new Chart(document.getElementById('chartHoras').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#292d5c', backgroundColor: 'rgba(41, 45, 92, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
 
             const audSeleccionado = document.getElementById('select-auditor').value;
-            const tituloGrafica = document.getElementById('chartAuditores').parentElement.previousElementSibling;
+            const tituloGrafica = document.getElementById('titulo-chart-auditores');
             
-            let labelsBarra = [];
-            let dataBarra = [];
+            let labelsBarra = [], dataBarra = [];
 
             if (audSeleccionado) {
                 tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
@@ -269,7 +288,7 @@
             } else {
                 tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
                 const aC = {}; 
-                lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
+                lista.forEach(i => { let a = getAuditorLimpio(i); if(a) aC[a] = (aC[a]||0)+1; });
                 labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
                 dataBarra = labelsBarra.map(a=>aC[a]);
             }
@@ -287,14 +306,17 @@
             let countDfl = 0, sumDfl = 0;
 
             const res = datosCaza.filter(d => {
-                const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                              (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
-                              (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+                const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
+                const matchFecha = (!fI || f >= fI) && (!fF || f <= fF);
+                const matchAud = !aud || getAuditor(d) === aud;
+                const matchProc = procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p));
+                const matchTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
+                
+                const match = matchFecha && matchAud && matchProc && matchTxt;
                 
                 if (match) {
                     const proc = getProceso(d).toUpperCase();
-                    if (proc.endsWith('FOUND') || proc.includes('FOUND')) {
+                    if (proc.includes('FOUND')) {
                         countFound++;
                         sumFound += getMonto(d);
                     } else {
@@ -330,19 +352,23 @@
         }
 
         function graficarCaza(lista) {
-            const tC = {}; lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
+            const tC = {}; 
+            lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
+
             if(chartTipoCaza) chartTipoCaza.destroy();
             chartTipoCaza = new Chart(document.getElementById('chartTipoCaza').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
 
             const auditoresObj = {};
             lista.forEach(i => { 
-                let a = getAuditor(i).split('@')[0]; 
+                let a = getAuditorLimpio(i); 
                 let monto = getMonto(i);
                 let esFound = getProceso(i).toUpperCase().includes('FOUND');
                 
-                if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
-                if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
-                auditoresObj[a].total += monto;
+                if (a) {
+                    if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
+                    if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
+                    auditoresObj[a].total += monto;
+                }
             });
             
             const as = Object.keys(auditoresObj).sort((a,b) => auditoresObj[b].total - auditoresObj[a].total);
