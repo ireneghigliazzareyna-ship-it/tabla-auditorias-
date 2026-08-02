@@ -3,54 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard TMWH & Caza Lost</title>
+    <title>Dashboard PI - TMWH, Caza Lost & Founds Generales</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --tmwh-bg: #292d5c; --tmwh-card: #ffffff; --tmwh-text: #333333; --tmwh-accent: #ffc107;
             --caza-bg: #fffbf2; --caza-header: #f5a623; --caza-dark: #d08c1b;
+            --fg-bg: #f0f7ff; --fg-header: #0284c7; --fg-dark: #0369a1; --fg-accent: #38bdf8;
         }
         body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background-color: #eef1f6; color: #333; }
-        .module-wrapper { padding: 20px 30px; margin-bottom: 40px; }
-        .divider-bar { height: 8px; background: linear-gradient(90deg, var(--tmwh-bg) 50%, var(--caza-header) 50%); width: 100%; margin: 20px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .module-wrapper { padding: 20px 30px; margin-bottom: 20px; }
+        
+        /* Barras Divisoras */
+        .divider-bar { height: 6px; background: linear-gradient(90deg, var(--tmwh-bg) 33%, var(--caza-header) 33% 66%, var(--fg-header) 66%); width: 100%; margin: 10px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        /* Headers */
         .main-header { background-color: var(--tmwh-bg); color: white; padding: 15px 30px; display: flex; align-items: center; border-bottom: 4px solid var(--tmwh-accent); }
-        .main-header h1 { margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 1px; }
-        .main-header span { color: var(--tmwh-accent); font-weight: bold; font-size: 13px; margin-left: 10px; padding-top: 5px; }
+        .main-header h1 { margin: 0; font-size: 22px; text-transform: uppercase; letter-spacing: 1px; }
+        .main-header span { color: var(--tmwh-accent); font-weight: bold; font-size: 12px; margin-left: 10px; padding-top: 3px; }
+        
         .header-caza { background-color: var(--caza-header); color: #222; border-bottom: 4px solid var(--caza-dark); }
         .header-caza span { color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.2); }
-        .filter-panel { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 20px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; }
-        .filter-group { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 6px; }
+
+        .header-fg { background-color: var(--fg-header); color: #fff; border-bottom: 4px solid var(--fg-dark); }
+        .header-fg span { color: var(--fg-accent); }
+
+        /* Filtros */
+        .filter-panel { background: white; padding: 15px 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-top: 15px; margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 15px; }
+        .filter-group { flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 4px; }
         .filter-group label { font-size: 11px; font-weight: 700; color: #555; text-transform: uppercase; }
-        .filter-group input, .filter-group select, .custom-select-header { padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 13px; background-color: #f9fafb; outline: none; cursor: pointer; }
+        .filter-group input, .filter-group select, .custom-select-header { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; background-color: #f9fafb; outline: none; cursor: pointer; }
+        
         .custom-select-container { position: relative; user-select: none; }
         .custom-select-header { display: flex; justify-content: space-between; align-items: center; }
         .custom-select-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 4px 8px rgba(0,0,0,0.15); margin-top: 5px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; flex-direction: column; }
         .custom-select-list.show { display: flex; }
-        .checkbox-item { padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;}
+        .checkbox-item { padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;}
         .checkbox-item:hover { background-color: #f1f5f9; }
         .checkbox-item.all-option { font-weight: bold; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; }
+
+        /* Grid Dashboard */
         .dashboard-grid { display: grid; grid-template-columns: 260px 1fr 1fr; gap: 20px; margin-bottom: 20px; }
         .kpi-container { display: flex; flex-direction: column; gap: 15px; }
-        .kpi-card { background: white; padding: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; border-left: 4px solid var(--tmwh-bg); flex: 1; display: flex; flex-direction: column; justify-content: center; }
+        .kpi-card { background: white; padding: 20px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; border-left: 5px solid var(--tmwh-bg); flex: 1; display: flex; flex-direction: column; justify-content: center; }
         .kpi-card.caza-style { border-left-color: var(--caza-header); }
-        .kpi-card .number { font-size: 32px; font-weight: bold; color: #333; }
-        .kpi-card .label { font-size: 11px; text-transform: uppercase; color: #777; margin-top: 5px; font-weight: 600;}
-        .chart-card { background: white; padding: 15px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: 280px; }
-        .chart-header { background-color: var(--tmwh-bg); color: white; padding: 8px 15px; margin: -15px -15px 15px -15px; border-radius: 4px 4px 0 0; font-size: 12px; text-transform: uppercase; text-align: center; font-weight: bold; }
+        .kpi-card.fg-style { border-left-color: var(--fg-header); }
+        .kpi-card .number { font-size: 30px; font-weight: bold; color: #333; }
+        .kpi-card .label { font-size: 11px; text-transform: uppercase; color: #666; margin-top: 5px; font-weight: 600;}
+
+        /* Charts */
+        .chart-card { background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); height: 260px; }
+        .chart-header { background-color: var(--tmwh-bg); color: white; padding: 8px 15px; margin: -15px -15px 15px -15px; border-radius: 6px 6px 0 0; font-size: 11px; text-transform: uppercase; text-align: center; font-weight: bold; }
         .chart-header.caza-style { background-color: var(--caza-dark); }
-        .chart-container { position: relative; height: 220px; width: 100%; }
-        .table-container { background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-height: 400px; overflow-y: auto; }
+        .chart-header.fg-style { background-color: var(--fg-dark); }
+        .chart-container { position: relative; height: 200px; width: 100%; }
+
+        /* Tablas */
+        .table-container { background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); max-height: 380px; overflow-y: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background-color: var(--tmwh-bg); color: white; position: sticky; top: 0; padding: 12px 15px; text-align: left; z-index: 1; text-transform: uppercase; font-size: 11px; }
+        th { background-color: var(--tmwh-bg); color: white; position: sticky; top: 0; padding: 10px 15px; text-align: left; z-index: 1; text-transform: uppercase; font-size: 11px; }
         th.caza-style { background-color: var(--caza-header); color: #222; }
-        td { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; color: #444; }
+        th.fg-style { background-color: var(--fg-header); color: #fff; }
+        td { padding: 8px 15px; border-bottom: 1px solid #f1f5f9; color: #444; }
         tr:nth-child(even) { background-color: #fafbfc; }
         tr:hover { background-color: #f1f5f9; }
     </style>
 </head>
 <body>
 
-    <div id="status" style="text-align: center; padding: 50px;">Cargando sistemas Mark VI...</div>
+    <div id="status" style="text-align: center; padding: 50px; font-size: 18px; font-weight: bold; color: #555;">Cargando sistemas Mark VI...</div>
 
     <!-- SECCIÓN 1: TMWH -->
     <div id="panel-tmwh" style="display: none;">
@@ -77,11 +98,10 @@
         </div>
     </div>
 
-    <!-- DIVISOR -->
-    <div class="divider-bar" id="divider" style="display: none;"></div>
+    <div class="divider-bar" id="divider1" style="display: none;"></div>
 
     <!-- SECCIÓN 2: CAZA LOST -->
-    <div id="panel-caza" style="display: none; background-color: var(--caza-bg); padding-bottom: 40px;">
+    <div id="panel-caza" style="display: none; background-color: var(--caza-bg);">
         <div class="main-header header-caza">
             <h1>Caza Lost</h1>
             <span>RECUPERACIÓN DFL & FOUND | SITE MXNL01</span>
@@ -96,10 +116,10 @@
             </div>
             <div class="dashboard-grid">
                 <div class="kpi-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 15px;"><div class="number" id="kpi-found-count" style="font-size: 24px; color: #4caf50;">0</div><div class="label" style="font-size: 9px;">Recuperados (Founds)</div></div>
-                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 15px;"><div class="number" id="kpi-found-usd" style="font-size: 24px; color: #4caf50;">$0</div><div class="label" style="font-size: 9px;">Monto Recuperado</div></div>
-                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 15px;"><div class="number" id="kpi-dfl-count" style="font-size: 24px; color: #d08c1b;">0</div><div class="label" style="font-size: 9px;">Analizados (a DFL)</div></div>
-                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 15px;"><div class="number" id="kpi-dfl-usd" style="font-size: 24px; color: #d08c1b;">$0</div><div class="label" style="font-size: 9px;">Monto Analizado</div></div>
+                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 10px;"><div class="number" id="kpi-found-count" style="font-size: 22px; color: #4caf50;">0</div><div class="label" style="font-size: 9px;">Recuperados (Founds)</div></div>
+                    <div class="kpi-card caza-style" style="border-left-color: #4caf50; padding: 10px;"><div class="number" id="kpi-found-usd" style="font-size: 20px; color: #4caf50;">$0</div><div class="label" style="font-size: 9px;">Monto Recuperado</div></div>
+                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 10px;"><div class="number" id="kpi-dfl-count" style="font-size: 22px; color: #d08c1b;">0</div><div class="label" style="font-size: 9px;">Analizados (a DFL)</div></div>
+                    <div class="kpi-card caza-style" style="border-left-color: #d08c1b; padding: 10px;"><div class="number" id="kpi-dfl-usd" style="font-size: 20px; color: #d08c1b;">$0</div><div class="label" style="font-size: 9px;">Monto Analizado</div></div>
                 </div>
                 <div class="chart-card"><div class="chart-header caza-style">Casos: DFL vs Found</div><div class="chart-container"><canvas id="chartTipoCaza"></canvas></div></div>
                 <div class="chart-card"><div class="chart-header caza-style">Monto por Auditor: Recuperado vs DFL</div><div class="chart-container"><canvas id="chartMontoCaza"></canvas></div></div>
@@ -110,22 +130,41 @@
         </div>
     </div>
 
+    <div class="divider-bar" id="divider2" style="display: none;"></div>
+
+    <!-- SECCIÓN 3: FOUNDS GENERALES WMS -->
+    <div id="panel-fg" style="display: none; background-color: var(--fg-bg); padding-bottom: 40px;">
+        <div class="main-header header-fg">
+            <h1>Founds Generales WMS</h1>
+            <span>HALLAZGOS DIRECTOS FUERA DE CAZA LOST | SITE MXNL01</span>
+        </div>
+        <div class="module-wrapper">
+            <div class="filter-panel">
+                <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio-fg" onchange="filtrarFG()"></div>
+                <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin-fg" onchange="filtrarFG()"></div>
+                <div class="filter-group"><label>Auditor WMS</label><select id="select-auditor-fg" onchange="filtrarFG()"><option value="">Todos los auditores</option></select></div>
+                <div class="filter-group"><label>Buscar ID / Inventory</label><input type="text" id="search-fg" placeholder="Escribe para buscar..." oninput="filtrarFG()"></div>
+            </div>
+            <div class="dashboard-grid">
+                <div class="kpi-container">
+                    <div class="kpi-card fg-style"><div class="number" id="kpi-fg-count" style="color: var(--fg-header);">0</div><div class="label">Total Founds Generales</div></div>
+                </div>
+                <div class="chart-card"><div class="chart-header fg-style">Founds Generales por Hora</div><div class="chart-container"><canvas id="chartHorasFG"></canvas></div></div>
+                <div class="chart-card"><div class="chart-header fg-style">Top Auditores (Founds Generales)</div><div class="chart-container"><canvas id="chartAuditoresFG"></canvas></div></div>
+            </div>
+            <div class="table-container">
+                <table><thead><tr><th class="fg-style">Fecha / Hora</th><th class="fg-style">Proceso</th><th class="fg-style">Auditor WMS</th><th class="fg-style">ID Transacción</th></tr></thead><tbody id="contenido-fg"></tbody></table>
+            </div>
+        </div>
+    </div>
+
     <script>
-        let datosTMWH = [], datosCaza = [];
+        let datosTMWH = [], datosCaza = [], datosFG = [];
         let procTMWH = [], procCaza = [];
-        let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza;
+        let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
 
-        // Normalizador de Auditor Seguro
-        function getAuditor(i) { 
-            let a = i.AUDITOR || i.auditor || i.USUARIO || 'Desconocido';
-            return String(a).trim();
-        }
-
-        function getAuditorLimpio(i) {
-            let a = getAuditor(i);
-            return a.split('@')[0].trim();
-        }
-
+        function getAuditor(i) { let a = i.AUDITOR || i.auditor || i.USUARIO || 'Desconocido'; return String(a).trim(); }
+        function getAuditorLimpio(i) { return getAuditor(i).split('@')[0].trim(); }
         function getProceso(i) { return String(i.PROCESO || i.proceso || '').trim(); }
         function getId(i) { return String(i.ID || i.id || ''); }
         function getMonto(i) { return parseFloat(i.MONTO || i.monto || 0) || 0; }
@@ -141,115 +180,111 @@
             });
         });
 
-        // SELECCIONAR / DESELECCIONAR TODOS SEGURO
         function toggleSelectAll(tipo, el) {
             const cls = tipo === 'TMWH' ? '.cb-tmwh' : '.cb-caza';
-            const checkboxes = document.querySelectorAll(cls);
-            checkboxes.forEach(cb => cb.checked = el.checked);
+            document.querySelectorAll(cls).forEach(cb => cb.checked = el.checked);
             if(tipo === 'TMWH') actTMWH(); else actCaza();
         }
 
         function actTMWH() {
             procTMWH = Array.from(document.querySelectorAll('.cb-tmwh:checked')).map(cb => cb.value);
             const totalCB = document.querySelectorAll('.cb-tmwh').length;
-            const t = document.getElementById('dropdown-text-tmwh');
-            t.innerText = procTMWH.length === 0 ? 'Todos' : (procTMWH.length === totalCB ? 'Todos los procesos' : `${procTMWH.length} selec.`);
+            document.getElementById('dropdown-text-tmwh').innerText = procTMWH.length === 0 ? 'Todos' : (procTMWH.length === totalCB ? 'Todos los procesos' : `${procTMWH.length} selec.`);
             filtrarDatos();
         }
 
         function actCaza() {
             procCaza = Array.from(document.querySelectorAll('.cb-caza:checked')).map(cb => cb.value);
             const totalCB = document.querySelectorAll('.cb-caza').length;
-            const t = document.getElementById('dropdown-text-caza');
-            t.innerText = procCaza.length === 0 ? 'Todos' : (procCaza.length === totalCB ? 'Todos los tipos' : `${procCaza.length} selec.`);
+            document.getElementById('dropdown-text-caza').innerText = procCaza.length === 0 ? 'Todos' : (procCaza.length === totalCB ? 'Todos los tipos' : `${procCaza.length} selec.`);
             filtrarCaza();
         }
 
+        // CARGA Y CLASIFICACIÓN DE DATOS (3 SECCIONES SIN DUPLICACIÓN)
         fetch('data.json?v=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
-                const rawTMWH = [], rawCaza = [];
+                const rawTMWH = [], rawCaza = [], rawFG = [];
 
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
                     if (proc.includes('CAZA')) {
                         rawCaza.push(item);
+                    } else if (proc.includes('FOUND GENERAL')) {
+                        rawFG.push(item);
                     } else {
                         rawTMWH.push(item);
                     }
                 });
 
-                // Agrupar TMWH por ID
+                // 1. TMWH Agrupados por ID
                 const agTMWH = {};
                 rawTMWH.forEach(i => {
                     let id = getId(i);
                     if(!id || id === 'null' || id === 'SIN_ID') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
-                    
                     if(!agTMWH[id]) { agTMWH[id] = {...i, _p: new Set([getProceso(i)])}; }
                     else { agTMWH[id]._p.add(getProceso(i)); }
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // Caza Lost: Registros directos
+                // 2. Caza Lost Directos
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
-                    if (!id || id === 'null' || id === '' || id === 'SIN_ID') {
-                        i.ID = 'SIN ID ASIGNADO';
-                    }
+                    if (!id || id === 'null' || id === '' || id === 'SIN_ID') i.ID = 'SIN ID ASIGNADO';
                     return i;
                 });
 
+                // 3. Founds Generales WMS
+                datosFG = rawFG;
+
                 document.getElementById('status').style.display = 'none';
-                document.getElementById('panel-tmwh').style.display = 'block';
-                document.getElementById('divider').style.display = 'block';
-                document.getElementById('panel-caza').style.display = 'block';
+                ['panel-tmwh', 'divider1', 'panel-caza', 'divider2', 'panel-fg'].forEach(id => document.getElementById(id).style.display = 'block');
 
                 poblarFiltros(datosTMWH, 'TMWH');
                 poblarFiltros(datosCaza, 'CAZA');
+                poblarFiltros(datosFG, 'FG');
+
                 filtrarDatos();
                 filtrarCaza();
+                filtrarFG();
             })
             .catch(err => document.getElementById('status').innerText = 'Error al cargar data.json: ' + err.message);
 
         function poblarFiltros(data, tipo) {
             const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
-            const setP = new Set();
-            data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
-            const procesos = [...setP].filter(Boolean).sort();
-
-            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
+            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : (tipo === 'CAZA' ? 'select-auditor-caza' : 'select-auditor-fg'));
             selAud.innerHTML = '<option value="">Todos los auditores</option>';
             auditores.forEach(a => selAud.add(new Option(a, a)));
 
-            const list = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
-            const cbCls = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
-            const fn = tipo === 'TMWH' ? 'actTMWH()' : 'actCaza()';
-            
-            let htmlOptions = `<label class="checkbox-item all-option"><input type="checkbox" onchange="toggleSelectAll('${tipo}', this)">--- SELECCIONAR TODOS ---</label>`;
-            htmlOptions += procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
-            
-            list.innerHTML = htmlOptions;
+            if (tipo !== 'FG') {
+                const setP = new Set();
+                data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
+                const procesos = [...setP].filter(Boolean).sort();
+                const list = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
+                const cbCls = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
+                const fn = tipo === 'TMWH' ? 'actTMWH()' : 'actCaza()';
+                
+                let htmlOptions = `<label class="checkbox-item all-option"><input type="checkbox" onchange="toggleSelectAll('${tipo}', this)">--- SELECCIONAR TODOS ---</label>`;
+                htmlOptions += procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
+                list.innerHTML = htmlOptions;
+            }
         }
 
-        // TMWH Logic
+        // --- LÓGICA SECCIÓN 1: TMWH ---
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
             const aud = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
             
             const res = datosTMWH.filter(d => {
                 const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
-                const matchFecha = (!fI || f >= fI) && (!fF || f <= fF);
-                const matchAud = !aud || getAuditor(d) === aud;
-                const matchProc = procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p));
-                const matchTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
-                return matchFecha && matchAud && matchProc && matchTxt;
+                return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
+                       (procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p))) &&
+                       (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
             });
             
             document.getElementById('total-registros').innerText = res.length.toLocaleString();
-            
             document.getElementById('contenido').innerHTML = res.length ? res.map(i => {
-                let mostrarId = getId(i);
-                if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
+                let mostrarId = getId(i); if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
                 return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td></tr>`;
             }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
             
@@ -258,71 +293,42 @@
 
         function graficarTMWH(lista) {
             const hC = Array(24).fill(0);
-            lista.forEach(i => { 
-                if(i.FECHA_HORA) { 
-                    const str = String(i.FECHA_HORA);
-                    const h = parseInt(str.includes('T') ? str.split('T')[1] : str.split(' ')[1]); 
-                    if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
-                } 
-            });
+            lista.forEach(i => { if(i.FECHA_HORA) { const h = parseInt(String(i.FECHA_HORA).includes('T') ? String(i.FECHA_HORA).split('T')[1] : String(i.FECHA_HORA).split(' ')[1]); if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; } });
 
             if(chartHoras) chartHoras.destroy();
             chartHoras = new Chart(document.getElementById('chartHoras').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#292d5c', backgroundColor: 'rgba(41, 45, 92, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
 
-            const audSeleccionado = document.getElementById('select-auditor').value;
-            const tituloGrafica = document.getElementById('titulo-chart-auditores');
-            
+            const audSel = document.getElementById('select-auditor').value;
             let labelsBarra = [], dataBarra = [];
-
-            if (audSeleccionado) {
-                tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
-                const pC = {}; 
-                lista.forEach(i => { 
-                    getProceso(i).split('+').forEach(p => {
-                        let nombreProceso = p.trim();
-                        if (nombreProceso) pC[nombreProceso] = (pC[nombreProceso] || 0) + 1;
-                    });
-                });
-                labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]);
-                dataBarra = labelsBarra.map(p=>pC[p]);
+            if (audSel) {
+                document.getElementById('titulo-chart-auditores').innerText = 'PROCESOS DE: ' + audSel.split('@')[0].toUpperCase();
+                const pC = {}; lista.forEach(i => getProceso(i).split('+').forEach(p => { let n = p.trim(); if(n) pC[n] = (pC[n]||0)+1; }));
+                labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]); dataBarra = labelsBarra.map(p=>pC[p]);
             } else {
-                tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
-                const aC = {}; 
-                lista.forEach(i => { let a = getAuditorLimpio(i); if(a) aC[a] = (aC[a]||0)+1; });
-                labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
-                dataBarra = labelsBarra.map(a=>aC[a]);
+                document.getElementById('titulo-chart-auditores').innerText = 'AUDITORÍAS POR AUDITOR';
+                const aC = {}; lista.forEach(i => { let a = getAuditorLimpio(i); if(a) aC[a] = (aC[a]||0)+1; });
+                labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]); dataBarra = labelsBarra.map(a=>aC[a]);
             }
 
             if(chartAuditores) chartAuditores.destroy();
             chartAuditores = new Chart(document.getElementById('chartAuditores').getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
         }
 
-        // CAZA Logic
+        // --- LÓGICA SECCIÓN 2: CAZA LOST ---
         function filtrarCaza() {
             const fI = document.getElementById('fecha-inicio-caza').value, fF = document.getElementById('fecha-fin-caza').value;
             const aud = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
             
-            let countFound = 0, sumFound = 0;
-            let countDfl = 0, sumDfl = 0;
-
+            let countFound = 0, sumFound = 0, countDfl = 0, sumDfl = 0;
             const res = datosCaza.filter(d => {
                 const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
-                const matchFecha = (!fI || f >= fI) && (!fF || f <= fF);
-                const matchAud = !aud || getAuditor(d) === aud;
-                const matchProc = procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p));
-                const matchTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
-                
-                const match = matchFecha && matchAud && matchProc && matchTxt;
+                const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
+                              (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
+                              (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
                 
                 if (match) {
-                    const proc = getProceso(d).toUpperCase();
-                    if (proc.includes('FOUND')) {
-                        countFound++;
-                        sumFound += getMonto(d);
-                    } else {
-                        countDfl++;
-                        sumDfl += getMonto(d);
-                    }
+                    if (getProceso(d).toUpperCase().includes('FOUND')) { countFound++; sumFound += getMonto(d); }
+                    else { countDfl++; sumDfl += getMonto(d); }
                 }
                 return match;
             });
@@ -334,53 +340,69 @@
 
             document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
                 const esFound = getProceso(i).toUpperCase().includes('FOUND');
-                const colorDinero = esFound ? '#4caf50' : '#d08c1b';
-                
-                let mostrarId = getId(i);
-                if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
-                
-                return `<tr>
-                    <td>${formFecha(i.FECHA_HORA)}</td>
-                    <td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td>
-                    <td>${getAuditor(i)}</td>
-                    <td><code>${mostrarId}</code></td>
-                    <td><strong style="color: ${colorDinero}">${formatearDinero(getMonto(i))}</strong></td>
-                </tr>`;
+                let mostrarId = getId(i); if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
+                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td><td><strong style="color: ${esFound ? '#4caf50' : '#d08c1b'}">${formatearDinero(getMonto(i))}</strong></td></tr>`;
             }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
             
             graficarCaza(res);
         }
 
         function graficarCaza(lista) {
-            const tC = {}; 
-            lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
-
+            const tC = {}; lista.forEach(i => { let p = getProceso(i).replace('CAZA - ',''); tC[p] = (tC[p]||0)+1; });
             if(chartTipoCaza) chartTipoCaza.destroy();
             chartTipoCaza = new Chart(document.getElementById('chartTipoCaza').getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
 
             const auditoresObj = {};
             lista.forEach(i => { 
-                let a = getAuditorLimpio(i); 
-                let monto = getMonto(i);
-                let esFound = getProceso(i).toUpperCase().includes('FOUND');
-                
+                let a = getAuditorLimpio(i), monto = getMonto(i), esFound = getProceso(i).toUpperCase().includes('FOUND');
                 if (a) {
                     if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
-                    if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
+                    if (esFound) auditoresObj[a].found += monto; else auditoresObj[a].dfl += monto;
                     auditoresObj[a].total += monto;
                 }
             });
             
             const as = Object.keys(auditoresObj).sort((a,b) => auditoresObj[b].total - auditoresObj[a].total);
-            const dataFound = as.map(a => auditoresObj[a].found);
-            const dataDfl = as.map(a => auditoresObj[a].dfl);
-
             if(chartMontoCaza) chartMontoCaza.destroy();
             chartMontoCaza = new Chart(document.getElementById('chartMontoCaza').getContext('2d'), { 
                 type: 'bar', 
-                data: { labels: as, datasets: [ { label: 'Recuperado (Found)', data: dataFound, backgroundColor: '#4caf50', borderRadius: 2 }, { label: 'Analizado (DFL)', data: dataDfl, backgroundColor: '#d08c1b', borderRadius: 2 } ] }, 
+                data: { labels: as, datasets: [ { label: 'Recuperado (Found)', data: as.map(a => auditoresObj[a].found), backgroundColor: '#4caf50', borderRadius: 2 }, { label: 'Analizado (DFL)', data: as.map(a => auditoresObj[a].dfl), backgroundColor: '#d08c1b', borderRadius: 2 } ] }, 
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }, scales: { x: { stacked: true }, y: { stacked: true } } }
             });
+        }
+
+        // --- LÓGICA SECCIÓN 3: FOUNDS GENERALES WMS ---
+        function filtrarFG() {
+            const fI = document.getElementById('fecha-inicio-fg').value, fF = document.getElementById('fecha-fin-fg').value;
+            const aud = document.getElementById('select-auditor-fg').value, txt = document.getElementById('search-fg').value.toLowerCase();
+
+            const res = datosFG.filter(d => {
+                const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
+                return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
+                       (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+            });
+
+            document.getElementById('kpi-fg-count').innerText = res.length.toLocaleString();
+            document.getElementById('contenido-fg').innerHTML = res.length ? res.map(i => {
+                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong style="color: var(--fg-header)">${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${getId(i)}</code></td></tr>`;
+            }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
+
+            graficarFG(res);
+        }
+
+        function graficarFG(lista) {
+            const hC = Array(24).fill(0);
+            lista.forEach(i => { if(i.FECHA_HORA) { const h = parseInt(String(i.FECHA_HORA).includes('T') ? String(i.FECHA_HORA).split('T')[1] : String(i.FECHA_HORA).split(' ')[1]); if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; } });
+
+            if(chartHorasFG) chartHorasFG.destroy();
+            chartHorasFG = new Chart(document.getElementById('chartHorasFG').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+
+            const aC = {}; lista.forEach(i => { let a = getAuditorLimpio(i); if(a) aC[a] = (aC[a]||0)+1; });
+            const labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
+            const dataBarra = labelsBarra.map(a=>aC[a]);
+
+            if(chartAuditoresFG) chartAuditoresFG.destroy();
+            chartAuditoresFG = new Chart(document.getElementById('chartAuditoresFG').getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#38bdf8', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
         }
     </script>
 </body>
