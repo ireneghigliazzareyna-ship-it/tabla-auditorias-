@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Consolidado de Auditorías PI - MXNL01</title>
+    <title>Dashboard Consolidado de Auditorías - MXNL01</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -92,7 +92,6 @@
             outline: none;
         }
 
-        /* Dropdown Multiselect */
         .dropdown-container {
             position: relative;
         }
@@ -134,7 +133,6 @@
         .checkbox-item:hover { background: #f1f5f9; }
         .checkbox-item.all-option { font-weight: bold; border-bottom: 1px solid var(--border-color); }
 
-        /* KPI Cards */
         .kpi-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -153,7 +151,6 @@
         .kpi-title { font-size: 0.8rem; color: #64748b; text-transform: uppercase; font-weight: bold; }
         .kpi-value { font-size: 1.4rem; font-weight: bold; margin-top: 5px; }
 
-        /* Charts & Tables */
         .charts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -166,7 +163,25 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 15px;
-            height: 300px;
+            height: 320px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chart-title {
+            font-size: 0.85rem;
+            font-weight: bold;
+            color: #64748b;
+            text-align: center;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .canvas-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            height: 100%;
         }
 
         .table-container {
@@ -250,8 +265,14 @@
         </div>
 
         <div class="charts-grid">
-            <div class="chart-box"><canvas id="chartHoras"></canvas></div>
-            <div class="chart-box"><canvas id="chartAuditores"></canvas></div>
+            <div class="chart-box">
+                <div class="chart-title">Distribución por Hora</div>
+                <div class="canvas-container"><canvas id="chartHoras"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title" id="titulo-chart-auditores">Auditorías por Auditor</div>
+                <div class="canvas-container"><canvas id="chartAuditores"></canvas></div>
+            </div>
         </div>
 
         <div class="table-container">
@@ -323,8 +344,14 @@
         </div>
 
         <div class="charts-grid">
-            <div class="chart-box"><canvas id="chartTipoCaza"></canvas></div>
-            <div class="chart-box"><canvas id="chartMontoCaza"></canvas></div>
+            <div class="chart-box">
+                <div class="chart-title">Distribución por Tipo de Caza</div>
+                <div class="canvas-container"><canvas id="chartTipoCaza"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">Monto Analizado por Auditor</div>
+                <div class="canvas-container"><canvas id="chartMontoCaza"></canvas></div>
+            </div>
         </div>
 
         <div class="table-container">
@@ -376,8 +403,14 @@
         </div>
 
         <div class="charts-grid">
-            <div class="chart-box"><canvas id="chartHorasFG"></canvas></div>
-            <div class="chart-box"><canvas id="chartAuditoresFG"></canvas></div>
+            <div class="chart-box">
+                <div class="chart-title">Distribución por Hora (Founds WMS)</div>
+                <div class="canvas-container"><canvas id="chartHorasFG"></canvas></div>
+            </div>
+            <div class="chart-box">
+                <div class="chart-title">Founds por Auditor</div>
+                <div class="canvas-container"><canvas id="chartAuditoresFG"></canvas></div>
+            </div>
         </div>
 
         <div class="table-container">
@@ -402,7 +435,7 @@
         let procTMWH = [], procCaza = [];
         let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
 
-        // DICCIONARIO OFICIAL DE NORMALIZACIÓN PARA TUS 10 AUDITORES
+        // DICCIONARIO DE NORMALIZACIÓN PARA TUS 10 AUDITORES
         function getAuditor(i) { 
             let a = i.AUDITOR || i.auditor || i.USUARIO || '';
             let str = String(a).toLowerCase().trim();
@@ -437,7 +470,10 @@
             ['dropdown-container-tmwh', 'dropdown-container-caza'].forEach(cId => {
                 const c = document.getElementById(cId);
                 const lId = cId.replace('container', 'list');
-                if (c && !c.contains(e.target)) document.getElementById(lId).classList.remove('show');
+                if (c && !c.contains(e.target)) {
+                    const el = document.getElementById(lId);
+                    if(el) el.classList.remove('show');
+                }
             });
         });
 
@@ -461,7 +497,7 @@
             filtrarCaza();
         }
 
-        // CARGA Y CLASIFICACIÓN DE DATOS (3 SECCIONES INDEPENDIENTES)
+        // CARGA Y CLASIFICACIÓN ESTRICTA
         fetch('data.json?v=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
@@ -469,16 +505,22 @@
 
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
-                    if (proc.includes('CAZA')) {
-                        rawCaza.push(item);
-                    } else if (proc === 'FOUND GENERAL WMS') {
+                    
+                    // 1. Founds Generales WMS estricto
+                    if (proc === 'FOUND GENERAL WMS' || proc === 'GENERAL WMS FOUND') {
                         rawFG.push(item);
-                    } else {
+                    } 
+                    // 2. Caza Lost estricto (no se junta con FG)
+                    else if (proc.startsWith('CAZA') || proc.includes('DFL') || proc.includes('RESCATE')) {
+                        rawCaza.push(item);
+                    } 
+                    // 3. TMWH convencional
+                    else {
                         rawTMWH.push(item);
                     }
                 });
 
-                // 1. TMWH: Agrupados por ID cuando coinciden en procesos paralelos
+                // TMWH Agrupamiento inteligente por ID
                 const agTMWH = {};
                 rawTMWH.forEach(i => {
                     let id = getId(i);
@@ -491,14 +533,12 @@
                 });
                 datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
 
-                // 2. Caza Lost: Respeta cada evento y re-análisis independiente
                 datosCaza = rawCaza.map(i => {
                     let id = getId(i);
                     if (!id || id === 'null' || id === '' || id === 'SIN_ID') i.ID = 'SIN ID ASIGNADO';
                     return i;
                 });
 
-                // 3. Founds Generales WMS: Trae 100% de los Founds
                 datosFG = rawFG;
 
                 document.getElementById('status').style.display = 'none';
@@ -569,7 +609,8 @@
             const hC = Array(24).fill(0);
             lista.forEach(i => { 
                 if(i.FECHA_HORA) { 
-                    const timePart = String(i.FECHA_HORA).includes('T') ? String(i.FECHA_HORA).split('T')[1] : String(i.FECHA_HORA).split(' ')[1];
+                    const strF = String(i.FECHA_HORA);
+                    const timePart = strF.includes('T') ? strF.split('T')[1] : strF.split(' ')[1];
                     if(timePart) {
                         const h = parseInt(timePart.split(':')[0]);
                         if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
@@ -583,12 +624,14 @@
 
             const audSel = document.getElementById('select-auditor')?.value;
             let labelsBarra = [], dataBarra = [];
+            
+            const tituloEl = document.getElementById('titulo-chart-auditores');
             if (audSel) {
-                document.getElementById('titulo-chart-auditores').innerText = 'PROCESOS DE: ' + audSel.toUpperCase();
+                if(tituloEl) tituloEl.innerText = 'PROCESOS DE: ' + audSel.toUpperCase();
                 const pC = {}; lista.forEach(i => getProceso(i).split('+').forEach(p => { let n = p.trim(); if(n) pC[n] = (pC[n]||0)+1; }));
                 labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]); dataBarra = labelsBarra.map(p=>pC[p]);
             } else {
-                document.getElementById('titulo-chart-auditores').innerText = 'AUDITORÍAS POR AUDITOR';
+                if(tituloEl) tituloEl.innerText = 'AUDITORÍAS POR AUDITOR';
                 const aC = {}; lista.forEach(i => { let a = getAuditorLimpio(i); if(a && a !== 'Desconocido') aC[a] = (aC[a]||0)+1; });
                 labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]); dataBarra = labelsBarra.map(a=>aC[a]);
             }
@@ -680,7 +723,8 @@
             const hC = Array(24).fill(0);
             lista.forEach(i => { 
                 if(i.FECHA_HORA) { 
-                    const timePart = String(i.FECHA_HORA).includes('T') ? String(i.FECHA_HORA).split('T')[1] : String(i.FECHA_HORA).split(' ')[1];
+                    const strF = String(i.FECHA_HORA);
+                    const timePart = strF.includes('T') ? strF.split('T')[1] : strF.split(' ')[1];
                     if(timePart) {
                         const h = parseInt(timePart.split(':')[0]);
                         if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
