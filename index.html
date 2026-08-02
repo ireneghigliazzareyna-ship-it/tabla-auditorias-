@@ -510,7 +510,7 @@
                     if (proc === 'FOUND GENERAL WMS' || proc === 'GENERAL WMS FOUND') {
                         rawFG.push(item);
                     } 
-                    // 2. Caza Lost estricto (no se junta con FG)
+                    // 2. Caza Lost estricto
                     else if (proc.startsWith('CAZA') || proc.includes('DFL') || proc.includes('RESCATE')) {
                         rawCaza.push(item);
                     } 
@@ -584,7 +584,7 @@
             }
         }
 
-        // --- LÓGICA SECCIÓN 1: TMWH ---
+        // --- LÓGICA SECCIÓN 1: TMWH (CORREGIDA LA GRÁFICA DE AUDITORES/PROCESOS) ---
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio')?.value, fF = document.getElementById('fecha-fin')?.value;
             const aud = document.getElementById('select-auditor')?.value, txt = document.getElementById('search')?.value.toLowerCase();
@@ -628,17 +628,42 @@
             const tituloEl = document.getElementById('titulo-chart-auditores');
             if (audSel) {
                 if(tituloEl) tituloEl.innerText = 'PROCESOS DE: ' + audSel.toUpperCase();
-                const pC = {}; lista.forEach(i => getProceso(i).split('+').forEach(p => { let n = p.trim(); if(n) pC[n] = (pC[n]||0)+1; }));
-                labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]); dataBarra = labelsBarra.map(p=>pC[p]);
+                const pC = {}; 
+                lista.forEach(i => {
+                    const procStr = getProceso(i);
+                    const partes = procStr.includes('+') ? procStr.split('+') : [procStr];
+                    partes.forEach(p => { 
+                        let n = p.trim(); 
+                        if(n) pC[n] = (pC[n]||0)+1; 
+                    });
+                });
+                labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]); 
+                dataBarra = labelsBarra.map(p=>pC[p]);
             } else {
                 if(tituloEl) tituloEl.innerText = 'AUDITORÍAS POR AUDITOR';
-                const aC = {}; lista.forEach(i => { let a = getAuditorLimpio(i); if(a && a !== 'Desconocido') aC[a] = (aC[a]||0)+1; });
-                labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]); dataBarra = labelsBarra.map(a=>aC[a]);
+                const aC = {}; 
+                lista.forEach(i => { 
+                    let a = getAuditorLimpio(i); 
+                    if(a && a !== 'Desconocido') aC[a] = (aC[a]||0)+1; 
+                });
+                labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]); 
+                dataBarra = labelsBarra.map(a=>aC[a]);
             }
 
             if(chartAuditores) chartAuditores.destroy();
             const canvasA = document.getElementById('chartAuditores');
-            if(canvasA) chartAuditores = new Chart(canvasA.getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+            if(canvasA) chartAuditores = new Chart(canvasA.getContext('2d'), { 
+                type: 'bar', 
+                data: { 
+                    labels: labelsBarra, 
+                    datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius: 3 }] 
+                }, 
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } } 
+                }
+            });
         }
 
         // --- LÓGICA SECCIÓN 2: CAZA LOST ---
