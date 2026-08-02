@@ -160,11 +160,21 @@
         let procTMWH = [], procCaza = [];
         let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasWMS, chartAuditoresWMS;
 
-        function getAuditor(i) { return (i.AUDITOR || i.USUARIO || 'Desconocido').trim(); }
-        function getProceso(i) { return (i.PROCESO || i.proceso || '').trim(); }
-        function getId(i) { return i.ID || i.ID_TRANSACCION || ''; }
-        function getMonto(i) { return parseFloat(i.MONTO || 0); }
-        function formFecha(str) { return str ? str.replace('T', ' ').split('+')[0].split('.')[0] : ''; }
+        // Estandarización de auditor ultrasegura
+        function getAuditor(i) { 
+            let val = (i.AUDITOR || i.USUARIO || i.auditor || 'Desconocido').toString().trim();
+            return val;
+        }
+
+        function getAuditorEstandar(i) {
+            let a = getAuditor(i).toLowerCase();
+            return a.split('@')[0].replace(/\./g, ' ').trim();
+        }
+
+        function getProceso(i) { return (i.PROCESO || i.proceso || '').toString().trim(); }
+        function getId(i) { return (i.ID || i.ID_TRANSACCION || '').toString().trim(); }
+        function getMonto(i) { return parseFloat(i.MONTO || 0) || 0; }
+        function formFecha(str) { return str ? str.toString().replace('T', ' ').split('+')[0].split('.')[0] : ''; }
         function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
         function toggleDropdown(id) { document.getElementById(id).classList.toggle('show'); }
@@ -195,8 +205,9 @@
             .then(data => {
                 const rawTMWH = [], rawCaza = [], rawWMS = [];
 
-                // CLASIFICACIÓN ROBUSTA DE BUCKETS SIN DUPLICAR NI PERDER AUDITORES
                 data.forEach(item => {
+                    // Normalización del objeto
+                    item.AUDITOR_STD = getAuditorEstandar(item);
                     const proc = getProceso(item).toUpperCase();
                     
                     if (proc.includes('CAZA')) {
@@ -249,10 +260,10 @@
                 filtrarCaza();
                 filtrarWMS();
             })
-            .catch(err => document.getElementById('status').innerText = 'Error: ' + err.message);
+            .catch(err => document.getElementById('status').innerText = 'Error al cargar data.json: ' + err.message);
 
         function poblarFiltros(data, tipo) {
-            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
+            const auditores = [...new Set(data.map(d => d.AUDITOR_STD).filter(Boolean))].sort();
             const setP = new Set();
             data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
             const procesos = [...setP].filter(Boolean).sort();
@@ -269,7 +280,7 @@
         }
 
         function poblarFiltrosWMS(data) {
-            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
+            const auditores = [...new Set(data.map(d => d.AUDITOR_STD).filter(Boolean))].sort();
             const selAud = document.getElementById('select-auditor-wms');
             selAud.innerHTML = '<option value="">Todos los auditores</option>';
             auditores.forEach(a => selAud.add(new Option(a, a)));
@@ -279,18 +290,21 @@
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
             const aud = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
+            
             const res = datosTMWH.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                       (procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p))) &&
-                       (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+                const matchFecha = (!fI || (f && f >= fI)) && (!fF || (f && f <= fF));
+                const matchAud = !aud || d.AUDITOR_STD === aud;
+                const matchProc = procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p));
+                const matchTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
+                return matchFecha && matchAud && matchProc && matchTxt;
             });
             
             document.getElementById('total-registros').innerText = res.length.toLocaleString();
             document.getElementById('contenido').innerHTML = res.length ? res.map(i => {
                 let mostrarId = getId(i);
                 if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
-                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td></tr>`;
+                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${i.AUDITOR_STD}</td><td><code>${mostrarId}</code></td></tr>`;
             }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
             
             graficarTMWH(res);
@@ -308,7 +322,7 @@
             let labelsBarra = [], dataBarra = [];
 
             if (audSeleccionado) {
-                tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
+                tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.toUpperCase();
                 const pC = {}; 
                 lista.forEach(i => { 
                     getProceso(i).split('+').forEach(p => {
@@ -321,7 +335,7 @@
             } else {
                 tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
                 const aC = {}; 
-                lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
+                lista.forEach(i => { let a = i.AUDITOR_STD; if(a) aC[a] = (aC[a]||0)+1; });
                 labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
                 dataBarra = labelsBarra.map(a=>aC[a]);
             }
@@ -339,9 +353,12 @@
 
             const res = datosCaza.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                              (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
-                              (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+                const matchFecha = (!fI || (f && f >= fI)) && (!fF || (f && f <= fF));
+                const matchAud = !aud || d.AUDITOR_STD === aud;
+                const matchProc = procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p));
+                const matchTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
+                
+                const match = matchFecha && matchAud && matchProc && matchTxt;
                 
                 if (match) {
                     const proc = getProceso(d).toUpperCase();
@@ -365,7 +382,7 @@
                 return `<tr>
                     <td>${formFecha(i.FECHA_HORA)}</td>
                     <td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td>
-                    <td>${getAuditor(i)}</td>
+                    <td>${i.AUDITOR_STD}</td>
                     <td><code>${mostrarId}</code></td>
                     <td><strong style="color: ${colorDinero}">${formatearDinero(getMonto(i))}</strong></td>
                 </tr>`;
@@ -381,13 +398,15 @@
 
             const auditoresObj = {};
             lista.forEach(i => { 
-                let a = getAuditor(i).split('@')[0]; 
+                let a = i.AUDITOR_STD; 
                 let monto = getMonto(i);
                 let esFound = getProceso(i).toUpperCase().includes('FOUND');
                 
-                if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
-                if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
-                auditoresObj[a].total += monto;
+                if (a) {
+                    if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
+                    if (esFound) { auditoresObj[a].found += monto; } else { auditoresObj[a].dfl += monto; }
+                    auditoresObj[a].total += monto;
+                }
             });
             
             const as = Object.keys(auditoresObj).sort((a,b) => auditoresObj[b].total - auditoresObj[a].total);
@@ -411,9 +430,11 @@
 
             const res = datosWMS.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                              (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+                const matchFecha = (!fI || (f && f >= fI)) && (!fF || (f && f <= fF));
+                const matchAud = !aud || d.AUDITOR_STD === aud;
+                const matchTxt = !txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt));
                 
+                const match = matchFecha && matchAud && matchTxt;
                 if (match) { totalMonto += getMonto(d); }
                 return match;
             });
@@ -427,7 +448,7 @@
                 return `<tr>
                     <td>${formFecha(i.FECHA_HORA)}</td>
                     <td><strong style="color: #0288d1;">${getProceso(i)}</strong></td>
-                    <td>${getAuditor(i)}</td>
+                    <td>${i.AUDITOR_STD}</td>
                     <td><code>${mostrarId}</code></td>
                     <td><strong style="color: #0288d1;">${formatearDinero(getMonto(i))}</strong></td>
                 </tr>`;
@@ -443,7 +464,7 @@
             chartHorasWMS = new Chart(document.getElementById('chartHorasWMS').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#0288d1', backgroundColor: 'rgba(2, 136, 209, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
 
             const aC = {}; 
-            lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
+            lista.forEach(i => { let a = i.AUDITOR_STD; if(a) aC[a] = (aC[a]||0)+1; });
             const labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
             const dataBarra = labelsBarra.map(a=>aC[a]);
 
