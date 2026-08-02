@@ -168,18 +168,19 @@
         </div>
     </div>
 
-    <!-- SCRIPT PRINCIPAL DE LÓGICA Y RENDERIZADO -->
     <script>
         let datosTMWH = [], datosCaza = [], datosWMS = [];
         let procTMWH = [], procCaza = [];
         let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasWMS, chartAuditoresWMS;
 
-        function getAuditor(i) { 
-            return (i.AUDITOR || i.USUARIO || 'Desconocido').trim().toLowerCase();
+        // Limpieza estándar del auditor
+        function getAuditor(i) {
+            let val = (i.AUDITOR || i.USUARIO || 'Desconocido').trim();
+            return val;
         }
 
         function getAuditorLimpio(i) {
-            let a = getAuditor(i);
+            let a = getAuditor(i).toLowerCase();
             return a.split('@')[0].replace(/\./g, ' ').trim();
         }
 
@@ -226,7 +227,6 @@
             .then(data => {
                 const rawTMWH = [], rawCaza = [], rawWMS = [];
 
-                // SEPARACIÓN ESTRICTA DE BUCKETS
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
                     
@@ -283,25 +283,26 @@
             .catch(err => document.getElementById('status').innerText = 'Error: ' + err.message);
 
         function poblarFiltros(data, tipo) {
-            const auditoresMap = new Map();
+            // Extrae y ordena TODOS los auditores únicos
+            const mapAuditores = new Map();
             data.forEach(d => {
-                const limpio = getAuditorLimpio(d);
-                const original = getAuditor(d);
-                if (limpio && !auditoresMap.has(limpio)) {
-                    auditoresMap.set(limpio, original);
+                let orig = getAuditor(d);
+                let key = getAuditorLimpio(d);
+                if (key && !mapAuditores.has(key)) {
+                    mapAuditores.set(key, orig);
                 }
+            });
+
+            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
+            selAud.innerHTML = '<option value="">Todos los auditores</option>';
+            
+            Array.from(mapAuditores.keys()).sort().forEach(key => {
+                selAud.add(new Option(mapAuditores.get(key), key));
             });
 
             const setP = new Set();
             data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
             const procesos = [...setP].filter(Boolean).sort();
-
-            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
-            selAud.innerHTML = '<option value="">Todos los auditores</option>';
-            
-            Array.from(auditoresMap.keys()).sort().forEach(key => {
-                selAud.add(new Option(auditoresMap.get(key), key));
-            });
 
             const list = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
             const cbCls = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
@@ -314,23 +315,23 @@
         }
 
         function poblarFiltrosWMS(data) {
-            const auditoresMap = new Map();
+            const mapAuditores = new Map();
             data.forEach(d => {
-                const limpio = getAuditorLimpio(d);
-                const original = getAuditor(d);
-                if (limpio && !auditoresMap.has(limpio)) {
-                    auditoresMap.set(limpio, original);
+                let orig = getAuditor(d);
+                let key = getAuditorLimpio(d);
+                if (key && !mapAuditores.has(key)) {
+                    mapAuditores.set(key, orig);
                 }
             });
 
             const selAud = document.getElementById('select-auditor-wms');
             selAud.innerHTML = '<option value="">Todos los auditores</option>';
-            Array.from(auditoresMap.keys()).sort().forEach(key => {
-                selAud.add(new Option(auditoresMap.get(key), key));
+            
+            Array.from(mapAuditores.keys()).sort().forEach(key => {
+                selAud.add(new Option(mapAuditores.get(key), key));
             });
         }
 
-        // LOGIC 1: TMWH
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
             const audKey = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
@@ -387,7 +388,6 @@
             chartAuditores = new Chart(document.getElementById('chartAuditores').getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
         }
 
-        // LOGIC 2: CAZA LOST
         function filtrarCaza() {
             const fI = document.getElementById('fecha-inicio-caza').value, fF = document.getElementById('fecha-fin-caza').value;
             const audKey = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
@@ -460,7 +460,6 @@
             });
         }
 
-        // LOGIC 3: MOVIMIENTOS WMS (CELESTE CLARO)
         function filtrarWMS() {
             const fI = document.getElementById('fecha-inicio-wms').value, fF = document.getElementById('fecha-fin-wms').value;
             const audKey = document.getElementById('select-auditor-wms').value, txt = document.getElementById('search-wms').value.toLowerCase();
