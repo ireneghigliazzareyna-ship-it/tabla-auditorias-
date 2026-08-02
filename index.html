@@ -37,7 +37,6 @@
         .custom-select-list.show { display: flex; }
         .checkbox-item { padding: 8px 12px; display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;}
         .checkbox-item:hover { background-color: #f1f5f9; }
-        .checkbox-item.all-option { font-weight: bold; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc; }
 
         /* DASHBOARD LAYOUT */
         .dashboard-grid { display: grid; grid-template-columns: 260px 1fr 1fr; gap: 20px; margin-bottom: 20px; }
@@ -79,13 +78,7 @@
                 <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio" onchange="filtrarDatos()"></div>
                 <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin" onchange="filtrarDatos()"></div>
                 <div class="filter-group"><label>Auditor</label><select id="select-auditor" onchange="filtrarDatos()"><option value="">Todos los auditores</option></select></div>
-                <div class="filter-group">
-                    <label>Proceso</label>
-                    <div class="custom-select-container" id="dropdown-container-tmwh">
-                        <div class="custom-select-header" onclick="toggleDropdown('dropdown-list-tmwh')"><span id="dropdown-text-tmwh">Todos los procesos</span><span>▼</span></div>
-                        <div class="custom-select-list" id="dropdown-list-tmwh"></div>
-                    </div>
-                </div>
+                <div class="filter-group"><label>Proceso</label><div class="custom-select-container" id="dropdown-container-tmwh"><div class="custom-select-header" onclick="toggleDropdown('dropdown-list-tmwh')"><span id="dropdown-text-tmwh">Todos los procesos</span><span>▼</span></div><div class="custom-select-list" id="dropdown-list-tmwh"></div></div></div>
                 <div class="filter-group"><label>Búsqueda ID</label><input type="text" id="search" placeholder="Escribe para buscar..." oninput="filtrarDatos()"></div>
             </div>
             <div class="dashboard-grid">
@@ -113,13 +106,7 @@
                 <div class="filter-group"><label>Fecha Inicio</label><input type="date" id="fecha-inicio-caza" onchange="filtrarCaza()"></div>
                 <div class="filter-group"><label>Fecha Fin</label><input type="date" id="fecha-fin-caza" onchange="filtrarCaza()"></div>
                 <div class="filter-group"><label>Cazador (Auditor)</label><select id="select-auditor-caza" onchange="filtrarCaza()"><option value="">Todos los auditores</option></select></div>
-                <div class="filter-group">
-                    <label>Tipo Recuperación</label>
-                    <div class="custom-select-container" id="dropdown-container-caza">
-                        <div class="custom-select-header" onclick="toggleDropdown('dropdown-list-caza')"><span id="dropdown-text-caza">Todos los tipos</span><span>▼</span></div>
-                        <div class="custom-select-list" id="dropdown-list-caza"></div>
-                    </div>
-                </div>
+                <div class="filter-group"><label>Tipo Recuperación</label><div class="custom-select-container" id="dropdown-container-caza"><div class="custom-select-header" onclick="toggleDropdown('dropdown-list-caza')"><span id="dropdown-text-caza">Todos los tipos</span><span>▼</span></div><div class="custom-select-list" id="dropdown-list-caza"></div></div></div>
                 <div class="filter-group"><label>Buscar LPN / Item</label><input type="text" id="search-caza" placeholder="Escribe para buscar..." oninput="filtrarCaza()"></div>
             </div>
             <div class="dashboard-grid">
@@ -141,7 +128,7 @@
     <!-- DIVISOR 2 -->
     <div class="divider-bar" id="divider-wms" style="display: none;"></div>
 
-    <!-- SECCIÓN 3: MOVIMIENTOS WMS (FOUNDS) -->
+    <!-- SECCIÓN 3: MOVIMIENTOS WMS -->
     <div id="panel-wms" style="display: none; background-color: var(--wms-bg); padding-bottom: 40px;">
         <div class="main-header header-wms">
             <h1>Movimientos WMS - Founds (Pending & Total)</h1>
@@ -173,17 +160,7 @@
         let procTMWH = [], procCaza = [];
         let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasWMS, chartAuditoresWMS;
 
-        // Limpieza estándar del auditor
-        function getAuditor(i) {
-            let val = (i.AUDITOR || i.USUARIO || 'Desconocido').trim();
-            return val;
-        }
-
-        function getAuditorLimpio(i) {
-            let a = getAuditor(i).toLowerCase();
-            return a.split('@')[0].replace(/\./g, ' ').trim();
-        }
-
+        function getAuditor(i) { return (i.AUDITOR || i.USUARIO || 'Desconocido').trim(); }
         function getProceso(i) { return (i.PROCESO || i.proceso || '').trim(); }
         function getId(i) { return i.ID || i.ID_TRANSACCION || ''; }
         function getMonto(i) { return parseFloat(i.MONTO || 0); }
@@ -199,26 +176,17 @@
             });
         });
 
-        function toggleSelectAll(tipo, el) {
-            const cls = tipo === 'TMWH' ? '.cb-tmwh' : '.cb-caza';
-            const checkboxes = document.querySelectorAll(cls);
-            checkboxes.forEach(cb => cb.checked = el.checked);
-            if(tipo === 'TMWH') actTMWH(); else actCaza();
-        }
-
         function actTMWH() {
             procTMWH = Array.from(document.querySelectorAll('.cb-tmwh:checked')).map(cb => cb.value);
-            const totalCB = document.querySelectorAll('.cb-tmwh').length;
             const t = document.getElementById('dropdown-text-tmwh');
-            t.innerText = procTMWH.length === 0 ? 'Todos' : (procTMWH.length === totalCB ? 'Todos los procesos' : `${procTMWH.length} selec.`);
+            t.innerText = procTMWH.length === 0 ? 'Todos' : (procTMWH.length === 1 ? procTMWH[0] : `${procTMWH.length} selec.`);
             filtrarDatos();
         }
 
         function actCaza() {
             procCaza = Array.from(document.querySelectorAll('.cb-caza:checked')).map(cb => cb.value);
-            const totalCB = document.querySelectorAll('.cb-caza').length;
             const t = document.getElementById('dropdown-text-caza');
-            t.innerText = procCaza.length === 0 ? 'Todos' : (procCaza.length === totalCB ? 'Todos los tipos' : `${procCaza.length} selec.`);
+            t.innerText = procCaza.length === 0 ? 'Todos' : (procCaza.length === 1 ? procCaza[0] : `${procCaza.length} selec.`);
             filtrarCaza();
         }
 
@@ -227,12 +195,13 @@
             .then(data => {
                 const rawTMWH = [], rawCaza = [], rawWMS = [];
 
+                // CLASIFICACIÓN ROBUSTA DE BUCKETS SIN DUPLICAR NI PERDER AUDITORES
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
                     
-                    if (proc.startsWith('CAZA')) {
+                    if (proc.includes('CAZA')) {
                         rawCaza.push(item);
-                    } else if (proc === 'FOUND WMS DIRECTO') {
+                    } else if (proc.includes('WMS') || proc.includes('DIRECTO')) {
                         rawWMS.push(item);
                     } else {
                         rawTMWH.push(item);
@@ -283,63 +252,36 @@
             .catch(err => document.getElementById('status').innerText = 'Error: ' + err.message);
 
         function poblarFiltros(data, tipo) {
-            // Extrae y ordena TODOS los auditores únicos
-            const mapAuditores = new Map();
-            data.forEach(d => {
-                let orig = getAuditor(d);
-                let key = getAuditorLimpio(d);
-                if (key && !mapAuditores.has(key)) {
-                    mapAuditores.set(key, orig);
-                }
-            });
-
-            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
-            selAud.innerHTML = '<option value="">Todos los auditores</option>';
-            
-            Array.from(mapAuditores.keys()).sort().forEach(key => {
-                selAud.add(new Option(mapAuditores.get(key), key));
-            });
-
+            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
             const setP = new Set();
             data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
             const procesos = [...setP].filter(Boolean).sort();
+
+            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : 'select-auditor-caza');
+            selAud.innerHTML = '<option value="">Todos los auditores</option>';
+            auditores.forEach(a => selAud.add(new Option(a, a)));
 
             const list = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
             const cbCls = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
             const fn = tipo === 'TMWH' ? 'actTMWH()' : 'actCaza()';
             
-            let htmlOptions = `<label class="checkbox-item all-option"><input type="checkbox" onchange="toggleSelectAll('${tipo}', this)">--- SELECCIONAR TODOS ---</label>`;
-            htmlOptions += procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
-            
-            list.innerHTML = htmlOptions;
+            list.innerHTML = procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
         }
 
         function poblarFiltrosWMS(data) {
-            const mapAuditores = new Map();
-            data.forEach(d => {
-                let orig = getAuditor(d);
-                let key = getAuditorLimpio(d);
-                if (key && !mapAuditores.has(key)) {
-                    mapAuditores.set(key, orig);
-                }
-            });
-
+            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(Boolean))].sort();
             const selAud = document.getElementById('select-auditor-wms');
             selAud.innerHTML = '<option value="">Todos los auditores</option>';
-            
-            Array.from(mapAuditores.keys()).sort().forEach(key => {
-                selAud.add(new Option(mapAuditores.get(key), key));
-            });
+            auditores.forEach(a => selAud.add(new Option(a, a)));
         }
 
+        // 1. TMWH LOGIC
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio').value, fF = document.getElementById('fecha-fin').value;
-            const audKey = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
-            
+            const aud = document.getElementById('select-auditor').value, txt = document.getElementById('search').value.toLowerCase();
             const res = datosTMWH.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                return (!fI || f >= fI) && (!fF || f <= fF) && 
-                       (!audKey || getAuditorLimpio(d) === audKey) &&
+                return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
                        (procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p))) &&
                        (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
             });
@@ -366,7 +308,7 @@
             let labelsBarra = [], dataBarra = [];
 
             if (audSeleccionado) {
-                tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.toUpperCase();
+                tituloGrafica.innerText = 'PROCESOS DE: ' + audSeleccionado.split('@')[0].toUpperCase();
                 const pC = {}; 
                 lista.forEach(i => { 
                     getProceso(i).split('+').forEach(p => {
@@ -379,7 +321,7 @@
             } else {
                 tituloGrafica.innerText = 'AUDITORÍAS POR AUDITOR';
                 const aC = {}; 
-                lista.forEach(i => { let a = getAuditorLimpio(i); aC[a] = (aC[a]||0)+1; });
+                lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
                 labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
                 dataBarra = labelsBarra.map(a=>aC[a]);
             }
@@ -388,16 +330,16 @@
             chartAuditores = new Chart(document.getElementById('chartAuditores').getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
         }
 
+        // 2. CAZA LOGIC
         function filtrarCaza() {
             const fI = document.getElementById('fecha-inicio-caza').value, fF = document.getElementById('fecha-fin-caza').value;
-            const audKey = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
+            const aud = document.getElementById('select-auditor-caza').value, txt = document.getElementById('search-caza').value.toLowerCase();
             
             let countFound = 0, sumFound = 0, countDfl = 0, sumDfl = 0;
 
             const res = datosCaza.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                const match = (!fI || f >= fI) && (!fF || f <= fF) && 
-                              (!audKey || getAuditorLimpio(d) === audKey) &&
+                const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
                               (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
                               (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
                 
@@ -439,7 +381,7 @@
 
             const auditoresObj = {};
             lista.forEach(i => { 
-                let a = getAuditorLimpio(i); 
+                let a = getAuditor(i).split('@')[0]; 
                 let monto = getMonto(i);
                 let esFound = getProceso(i).toUpperCase().includes('FOUND');
                 
@@ -460,18 +402,18 @@
             });
         }
 
+        // 3. WMS LOGIC
         function filtrarWMS() {
             const fI = document.getElementById('fecha-inicio-wms').value, fF = document.getElementById('fecha-fin-wms').value;
-            const audKey = document.getElementById('select-auditor-wms').value, txt = document.getElementById('search-wms').value.toLowerCase();
+            const aud = document.getElementById('select-auditor-wms').value, txt = document.getElementById('search-wms').value.toLowerCase();
             
             let totalMonto = 0;
 
             const res = datosWMS.filter(d => {
                 const f = d.FECHA_HORA ? d.FECHA_HORA.substring(0, 10) : '';
-                const match = (!fI || f >= fI) && (!fF || f <= fF) && 
-                              (!audKey || getAuditorLimpio(d) === audKey) &&
+                const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
                               (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
-            
+                
                 if (match) { totalMonto += getMonto(d); }
                 return match;
             });
@@ -501,7 +443,7 @@
             chartHorasWMS = new Chart(document.getElementById('chartHorasWMS').getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#0288d1', backgroundColor: 'rgba(2, 136, 209, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
 
             const aC = {}; 
-            lista.forEach(i => { let a = getAuditorLimpio(i); aC[a] = (aC[a]||0)+1; });
+            lista.forEach(i => { let a = getAuditor(i).split('@')[0]; aC[a] = (aC[a]||0)+1; });
             const labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
             const dataBarra = labelsBarra.map(a=>aC[a]);
 
