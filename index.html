@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Consolidado de Auditorías - MXNL01</title>
+    <title>Dashboard Consolidado de Auditorías - MXNL01 v2.1</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -221,7 +221,7 @@
 <body>
 
 <div class="container">
-    <h1>Dashboard Consolidado de Auditorías - MXNL01</h1>
+    <h1>Dashboard Consolidado de Auditorías - MXNL01 <span style="font-size:0.5em; color:#0284c7;">(v2.1 Act)</span></h1>
     
     <div id="status">Cargando información desde BigQuery...</div>
 
@@ -435,7 +435,6 @@
         let procTMWH = [], procCaza = [];
         let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
 
-        // DICCIONARIO DE NORMALIZACIÓN PARA TUS 10 AUDITORES
         function getAuditor(i) { 
             let a = i.AUDITOR || i.auditor || i.USUARIO || '';
             let str = String(a).toLowerCase().trim();
@@ -465,7 +464,6 @@
         function formFecha(str) { return str ? String(str).replace('T', ' ').split('+')[0].split('.')[0] : ''; }
         function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
-        // IDENTIFICADOR DE FOUND EXCLUSIVO PARA CAZA LOST (SE IGNORA FOUND INV)
         function esResultadofound(p) {
             const str = String(p).toUpperCase();
             return str.includes('FOUND LP') || (str.includes('FOUND') && !str.includes('FOUND INV'));
@@ -503,8 +501,8 @@
             filtrarCaza();
         }
 
-        // CARGA Y CLASIFICACIÓN CON EXCLUSIÓN DE FOUND INV
-        fetch('data.json?v=' + new Date().getTime())
+        // CARGA FORZADA SIN CACHÉ CON TIMESTAMPS
+        fetch('data.json?timestamp=' + new Date().getTime())
             .then(res => res.json())
             .then(data => {
                 const rawTMWH = [], rawCaza = [], rawFG = [];
@@ -512,21 +510,22 @@
                 data.forEach(item => {
                     const proc = getProceso(item).toUpperCase();
                     
-                    // 1. Founds Generales WMS estricto
+                    // DESCARTE TOTAL: Si es FOUND INV se ignora completamente
+                    if (proc.includes('FOUND INV')) {
+                        return;
+                    }
+
                     if (proc === 'FOUND GENERAL WMS' || proc === 'GENERAL WMS FOUND') {
                         rawFG.push(item);
                     } 
-                    // 2. Caza Lost estricto (EXCLUYE TOTALMENTE FOUND INV)
-                    else if ((proc.includes('CAZA') || proc.includes('FOUND LP') || proc.includes('DFL')) && !proc.includes('FOUND INV')) {
+                    else if (proc.includes('CAZA') || proc.includes('FOUND LP') || proc.includes('DFL')) {
                         rawCaza.push(item);
                     } 
-                    // 3. TMWH convencional (también se ignora si viniera FOUND INV puro que no aplica)
-                    else if (!proc.includes('FOUND INV')) {
+                    else {
                         rawTMWH.push(item);
                     }
                 });
 
-                // TMWH Agrupamiento inteligente por ID
                 const agTMWH = {};
                 rawTMWH.forEach(i => {
                     let id = getId(i);
@@ -590,7 +589,7 @@
             }
         }
 
-        // --- LÓGICA SECCIÓN 1: TMWH ---
+        // SECCIÓN 1: TMWH
         function filtrarDatos() {
             const fI = document.getElementById('fecha-inicio')?.value, fF = document.getElementById('fecha-fin')?.value;
             const aud = document.getElementById('select-auditor')?.value, txt = document.getElementById('search')?.value.toLowerCase();
@@ -672,7 +671,7 @@
             });
         }
 
-        // --- LÓGICA SECCIÓN 2: CAZA LOST ---
+        // SECCIÓN 2: CAZA LOST
         function filtrarCaza() {
             const fI = document.getElementById('fecha-inicio-caza')?.value, fF = document.getElementById('fecha-fin-caza')?.value;
             const aud = document.getElementById('select-auditor-caza')?.value, txt = document.getElementById('search-caza')?.value.toLowerCase();
@@ -741,7 +740,7 @@
             });
         }
 
-        // --- LÓGICA SECCIÓN 3: FOUNDS GENERALES WMS ---
+        // SECCIÓN 3: FOUNDS GENERALES WMS
         function filtrarFG() {
             const fI = document.getElementById('fecha-inicio-fg')?.value, fF = document.getElementById('fecha-fin-fg')?.value;
             const aud = document.getElementById('select-auditor-fg')?.value, txt = document.getElementById('search-fg')?.value.toLowerCase();
