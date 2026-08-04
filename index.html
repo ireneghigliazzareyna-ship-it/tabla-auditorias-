@@ -431,359 +431,354 @@
 </div>
 
 <script>
-        let datosTMWH = [], datosCaza = [], datosFG = [];
-        let procTMWH = [], procCaza = [];
-        let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
+    let datosTMWH = [], datosCaza = [], datosFG = [];
+    let procTMWH = [], procCaza = [];
+    let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
 
-        function getAuditor(i) { 
-            let a = i.AUDITOR || i.auditor || i.USUARIO || '';
-            let str = String(a).toLowerCase().trim();
-            
-            if (!str || str === 'null' || str === 'undefined') return 'Desconocido';
-            if (str.includes('@')) str = str.split('@')[0];
-            str = str.replace(/\./g, ' ').trim();
+    function getAuditor(i) { 
+        let a = i.AUDITOR || i.auditor || i.USUARIO || '';
+        let str = String(a).toLowerCase().trim();
+        
+        if (!str || str === 'null' || str === 'undefined') return 'Desconocido';
+        if (str.includes('@')) str = str.split('@')[0];
+        str = str.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
 
-            if (str.includes('araceli') || str.includes('lara')) return 'Araceli Lara';
-            if (str.includes('adonay') || str.includes('ramirez')) return 'Adonay Ramirez';
-            if (str.includes('andyalois') || str.includes('mendez')) return 'Andy Mendez';
-            if (str.includes('saul') || str.includes('sanchez')) return 'Saul Sanchez';
-            if (str.includes('rosa') || str.includes('garcia')) return 'Rosa Garcia';
-            if (str.includes('blanca') || str.includes('martinez')) return 'Blanca Martinez';
-            if (str.includes('irene') || str.includes('ghigliazza')) return 'Irene Ghigliazza Reyna';
-            if (str.includes('brenda') || str.includes('lira')) return 'Brenda Lira';
-            if (str.includes('alejandra') || str.includes('carrizales')) return 'Alejandra Carrizales';
-            if (str.includes('montserrat') || str.includes('covarrubias')) return 'Montserrat Covarrubias';
-            
-            return str.replace(/\b\w/g, l => l.toUpperCase());
-        }
+        if (str.includes('saul') || str.includes('sanchez')) return 'Saul Sanchez';
+        if (str.includes('rosa') || str.includes('garcia')) return 'Rosa Garcia';
+        if (str.includes('alejandra') || str.includes('carrizales')) return 'Alejandra Carrizales';
+        if (str.includes('montserrat') || str.includes('covarrubias')) return 'Montserrat Covarrubias';
+        if (str.includes('adonay') || str.includes('ramirez')) return 'Adonay Ramirez';
+        if (str.includes('brenda') || str.includes('lira')) return 'Brenda Lira';
+        if (str.includes('blanca') || str.includes('martinez')) return 'Blanca Martinez';
+        if (str.includes('andy') || str.includes('mendez')) return 'Andy Mendez';
+        if (str.includes('irene') || str.includes('ghigliazza')) return 'Irene Ghigliazza Reyna';
+        if (str.includes('aracel') || str.includes('lara')) return 'Araceli Lara';
+        
+        return str.replace(/\b\w/g, l => l.toUpperCase());
+    }
 
-        function getAuditorLimpio(i) { return getAuditor(i); }
-        function getProceso(i) { return String(i.PROCESO || i.proceso || '').trim(); }
-        function getId(i) { return String(i.ID || i.id || '').trim(); }
-        function getMonto(i) { return parseFloat(i.MONTO || i.monto || 0) || 0; }
-        function formFecha(str) { return str ? String(str).replace('T', ' ').split('+')[0].split('.')[0] : ''; }
-        function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function getAuditorLimpio(i) { return getAuditor(i); }
+    function getProceso(i) { return String(i.PROCESO || i.proceso || '').trim(); }
+    function getId(i) { return String(i.ID || i.id || '').trim(); }
+    function getMonto(i) { return parseFloat(i.MONTO || i.monto || 0) || 0; }
+    function formFecha(str) { return str ? String(str).replace('T', ' ').split('+')[0].split('.')[0] : ''; }
+    function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
-        function esResultadofound(p) {
-            const str = String(p).toUpperCase();
-            return str.includes('FOUND LP') || (str.includes('FOUND') && !str.includes('FOUND INV'));
-        }
+    function esResultadofound(p) {
+        const str = String(p).toUpperCase();
+        return str.includes('FOUND LP') || (str.includes('FOUND') && !str.includes('FOUND INV'));
+    }
 
-        function toggleDropdown(id) { document.getElementById(id).classList.toggle('show'); }
-        document.addEventListener('click', e => {
-            ['dropdown-container-tmwh', 'dropdown-container-caza'].forEach(cId => {
-                const c = document.getElementById(cId);
-                const lId = cId.replace('container', 'list');
-                if (c && !c.contains(e.target)) {
-                    const el = document.getElementById(lId);
-                    if(el) el.classList.remove('show');
+    function toggleDropdown(id) { document.getElementById(id).classList.toggle('show'); }
+    document.addEventListener('click', e => {
+        ['dropdown-container-tmwh', 'dropdown-container-caza'].forEach(cId => {
+            const c = document.getElementById(cId);
+            const lId = cId.replace('container', 'list');
+            if (c && !c.contains(e.target)) {
+                const el = document.getElementById(lId);
+                if(el) el.classList.remove('show');
+            }
+        });
+    });
+
+    function toggleSelectAll(tipo, el) {
+        const cls = tipo === 'TMWH' ? '.cb-tmwh' : '.cb-caza';
+        document.querySelectorAll(cls).forEach(cb => cb.checked = el.checked);
+        if(tipo === 'TMWH') actTMWH(); else actCaza();
+    }
+
+    function actTMWH() {
+        procTMWH = Array.from(document.querySelectorAll('.cb-tmwh:checked')).map(cb => cb.value);
+        const totalCB = document.querySelectorAll('.cb-tmwh').length;
+        document.getElementById('dropdown-text-tmwh').innerText = procTMWH.length === 0 ? 'Todos' : (procTMWH.length === totalCB ? 'Todos los procesos' : `${procTMWH.length} selec.`);
+        filtrarDatos();
+    }
+
+    function actCaza() {
+        procCaza = Array.from(document.querySelectorAll('.cb-caza:checked')).map(cb => cb.value);
+        const totalCB = document.querySelectorAll('.cb-caza').length;
+        document.getElementById('dropdown-text-caza').innerText = procCaza.length === 0 ? 'Todos' : (procCaza.length === totalCB ? 'Todos los tipos' : `${procCaza.length} selec.`);
+        filtrarCaza();
+    }
+
+    fetch('data.json?timestamp=' + new Date().getTime())
+        .then(res => res.json())
+        .then(data => {
+            const rawTMWH = [], rawCaza = [], rawFG = [];
+
+            data.forEach(item => {
+                const proc = getProceso(item).toUpperCase().trim();
+                
+                if (proc.includes('FOUND INV')) {
+                    return;
+                }
+
+                if (proc.includes('FOUND GENERAL WMS') || proc.includes('GENERAL WMS FOUND')) {
+                    rawFG.push(item);
+                } 
+                else if (proc.includes('CAZA') || proc.includes('FOUND LP') || proc.includes('DFL')) {
+                    rawCaza.push(item);
+                } 
+                else {
+                    rawTMWH.push(item);
                 }
             });
+
+            const agTMWH = {};
+            rawTMWH.forEach(i => {
+                let id = getId(i);
+                if(!id || id === 'null' || id === 'SIN_ID') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
+                if(!agTMWH[id]) { 
+                    agTMWH[id] = {...i, _p: new Set([getProceso(i)])}; 
+                } else { 
+                    agTMWH[id]._p.add(getProceso(i)); 
+                }
+            });
+            datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
+
+            datosCaza = rawCaza.map(i => {
+                let id = getId(i);
+                if (!id || id === 'null' || id === '' || id === 'SIN_ID') i.ID = 'SIN ID ASIGNADO';
+                return i;
+            });
+
+            datosFG = rawFG;
+
+            document.getElementById('status').style.display = 'none';
+            ['panel-tmwh', 'divider1', 'panel-caza', 'divider2', 'panel-fg'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.style.display = 'block';
+            });
+
+            poblarFiltros(datosTMWH, 'TMWH');
+            poblarFiltros(datosCaza, 'CAZA');
+            poblarFiltros(datosFG, 'FG');
+
+            filtrarDatos();
+            filtrarCaza();
+            filtrarFG();
+        })
+        .catch(err => {
+            const statusEl = document.getElementById('status');
+            if(statusEl) statusEl.innerText = 'Error al cargar data.json: ' + err.message;
         });
 
-        function toggleSelectAll(tipo, el) {
-            const cls = tipo === 'TMWH' ? '.cb-tmwh' : '.cb-caza';
-            document.querySelectorAll(cls).forEach(cb => cb.checked = el.checked);
-            if(tipo === 'TMWH') actTMWH(); else actCaza();
+    function poblarFiltros(data, tipo) {
+        const auditores = [...new Set(data.map(d => getAuditor(d)).filter(a => a !== 'Desconocido'))].sort();
+        const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : (tipo === 'CAZA' ? 'select-auditor-caza' : 'select-auditor-fg'));
+        if(selAud) {
+            selAud.innerHTML = '<option value="">Todos los auditores</option>';
+            auditores.forEach(a => selAud.add(new Option(a, a)));
         }
 
-        function actTMWH() {
-            procTMWH = Array.from(document.querySelectorAll('.cb-tmwh:checked')).map(cb => cb.value);
-            const totalCB = document.querySelectorAll('.cb-tmwh').length;
-            document.getElementById('dropdown-text-tmwh').innerText = procTMWH.length === 0 ? 'Todos' : (procTMWH.length === totalCB ? 'Todos los procesos' : `${procTMWH.length} selec.`);
-            filtrarDatos();
-        }
-
-        function actCaza() {
-            procCaza = Array.from(document.querySelectorAll('.cb-caza:checked')).map(cb => cb.value);
-            const totalCB = document.querySelectorAll('.cb-caza').length;
-            document.getElementById('dropdown-text-caza').innerText = procCaza.length === 0 ? 'Todos' : (procCaza.length === totalCB ? 'Todos los tipos' : `${procCaza.length} selec.`);
-            filtrarCaza();
-        }
-
-        // CARGA FORZADA SIN CACHÉ CON TIMESTAMPS
-        fetch('data.json?timestamp=' + new Date().getTime())
-            .then(res => res.json())
-            .then(data => {
-                const rawTMWH = [], rawCaza = [], rawFG = [];
-
-                data.forEach(item => {
-                    const proc = getProceso(item).toUpperCase();
-                    
-                    // DESCARTE TOTAL: Si es FOUND INV se ignora completamente
-                    if (proc.includes('FOUND INV')) {
-                        return;
-                    }
-
-                    if (proc === 'FOUND GENERAL WMS' || proc === 'GENERAL WMS FOUND') {
-                        rawFG.push(item);
-                    } 
-                    else if (proc.includes('CAZA') || proc.includes('FOUND LP') || proc.includes('DFL')) {
-                        rawCaza.push(item);
-                    } 
-                    else {
-                        rawTMWH.push(item);
-                    }
-                });
-
-                const agTMWH = {};
-                rawTMWH.forEach(i => {
-                    let id = getId(i);
-                    if(!id || id === 'null' || id === 'SIN_ID') id = 'TMP_' + Math.random().toString(36).substring(2, 9);
-                    if(!agTMWH[id]) { 
-                        agTMWH[id] = {...i, _p: new Set([getProceso(i)])}; 
-                    } else { 
-                        agTMWH[id]._p.add(getProceso(i)); 
-                    }
-                });
-                datosTMWH = Object.values(agTMWH).map(i => { i.PROCESO = Array.from(i._p).join(' + '); return i; });
-
-                datosCaza = rawCaza.map(i => {
-                    let id = getId(i);
-                    if (!id || id === 'null' || id === '' || id === 'SIN_ID') i.ID = 'SIN ID ASIGNADO';
-                    return i;
-                });
-
-                datosFG = rawFG;
-
-                document.getElementById('status').style.display = 'none';
-                ['panel-tmwh', 'divider1', 'panel-caza', 'divider2', 'panel-fg'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if(el) el.style.display = 'block';
-                });
-
-                poblarFiltros(datosTMWH, 'TMWH');
-                poblarFiltros(datosCaza, 'CAZA');
-                poblarFiltros(datosFG, 'FG');
-
-                filtrarDatos();
-                filtrarCaza();
-                filtrarFG();
-            })
-            .catch(err => {
-                const statusEl = document.getElementById('status');
-                if(statusEl) statusEl.innerText = 'Error al cargar data.json: ' + err.message;
-            });
-
-        function poblarFiltros(data, tipo) {
-            const auditores = [...new Set(data.map(d => getAuditor(d)).filter(a => a !== 'Desconocido'))].sort();
-            const selAud = document.getElementById(tipo === 'TMWH' ? 'select-auditor' : (tipo === 'CAZA' ? 'select-auditor-caza' : 'select-auditor-fg'));
-            if(selAud) {
-                selAud.innerHTML = '<option value="">Todos los auditores</option>';
-                auditores.forEach(a => selAud.add(new Option(a, a)));
-            }
-
-            if (tipo !== 'FG') {
-                const setP = new Set();
-                data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
-                const procesos = [...setP].filter(Boolean).sort();
-                const list = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
-                const cbCls = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
-                const fn = tipo === 'TMWH' ? 'actTMWH()' : 'actCaza()';
-                
-                if(list) {
-                    let htmlOptions = `<label class="checkbox-item all-option"><input type="checkbox" onchange="toggleSelectAll('${tipo}', this)">--- SELECCIONAR TODOS ---</label>`;
-                    htmlOptions += procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
-                    list.innerHTML = htmlOptions;
-                }
+        if (tipo !== 'FG') {
+            const setP = new Set();
+            data.forEach(d => { getProceso(d).split(' + ').forEach(p => setP.add(p.trim())); });
+            const procesos = [...setP].filter(Boolean).sort();
+            const list = document.getElementById(tipo === 'TMWH' ? 'dropdown-list-tmwh' : 'dropdown-list-caza');
+            const cbCls = tipo === 'TMWH' ? 'cb-tmwh' : 'cb-caza';
+            const fn = tipo === 'TMWH' ? 'actTMWH()' : 'actCaza()';
+            
+            if(list) {
+                let htmlOptions = `<label class="checkbox-item all-option"><input type="checkbox" onchange="toggleSelectAll('${tipo}', this)">--- SELECCIONAR TODOS ---</label>`;
+                htmlOptions += procesos.map(p => `<label class="checkbox-item"><input type="checkbox" class="${cbCls}" value="${p}" onchange="${fn}">${p}</label>`).join('');
+                list.innerHTML = htmlOptions;
             }
         }
+    }
 
-        // SECCIÓN 1: TMWH
-        function filtrarDatos() {
-            const fI = document.getElementById('fecha-inicio')?.value, fF = document.getElementById('fecha-fin')?.value;
-            const aud = document.getElementById('select-auditor')?.value, txt = document.getElementById('search')?.value.toLowerCase();
-            
-            const res = datosTMWH.filter(d => {
-                const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
-                return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                       (procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p))) &&
-                       (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+    function filtrarDatos() {
+        const fI = document.getElementById('fecha-inicio')?.value, fF = document.getElementById('fecha-fin')?.value;
+        const aud = document.getElementById('select-auditor')?.value, txt = document.getElementById('search')?.value.toLowerCase();
+        
+        const res = datosTMWH.filter(d => {
+            const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
+            return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
+                   (procTMWH.length === 0 || procTMWH.some(p => getProceso(d).includes(p))) &&
+                   (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+        });
+        
+        document.getElementById('total-registros').innerText = res.length.toLocaleString();
+        document.getElementById('contenido').innerHTML = res.length ? res.map(i => {
+            let mostrarId = getId(i); if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
+            return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td></tr>`;
+        }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
+        
+        graficarTMWH(res);
+    }
+
+    function graficarTMWH(lista) {
+        const hC = Array(24).fill(0);
+        lista.forEach(i => { 
+            if(i.FECHA_HORA) { 
+                const strF = String(i.FECHA_HORA);
+                const timePart = strF.includes('T') ? strF.split('T')[1] : strF.split(' ')[1];
+                if(timePart) {
+                    const h = parseInt(timePart.split(':')[0]);
+                    if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
+                }
+            } 
+        });
+
+        if(chartHoras) chartHoras.destroy();
+        const canvasH = document.getElementById('chartHoras');
+        if(canvasH) chartHoras = new Chart(canvasH.getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#292d5c', backgroundColor: 'rgba(41, 45, 92, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+
+        const audSel = document.getElementById('select-auditor')?.value;
+        let labelsBarra = [], dataBarra = [];
+        
+        const tituloEl = document.getElementById('titulo-chart-auditores');
+        if (audSel) {
+            if(tituloEl) tituloEl.innerText = 'PROCESOS DE: ' + audSel.toUpperCase();
+            const pC = {}; 
+            lista.forEach(i => {
+                const procStr = getProceso(i);
+                const partes = procStr.includes('+') ? procStr.split('+') : [procStr];
+                partes.forEach(p => { 
+                    let n = p.trim(); 
+                    if(n) pC[n] = (pC[n]||0)+1; 
+                });
             });
-            
-            document.getElementById('total-registros').innerText = res.length.toLocaleString();
-            document.getElementById('contenido').innerHTML = res.length ? res.map(i => {
-                let mostrarId = getId(i); if(mostrarId.includes('TMP_')) mostrarId = 'SIN ID ASIGNADO';
-                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td></tr>`;
-            }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
-            
-            graficarTMWH(res);
+            labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]); 
+            dataBarra = labelsBarra.map(p=>pC[p]);
+        } else {
+            if(tituloEl) tituloEl.innerText = 'AUDITORÍAS POR AUDITOR';
+            const aC = {}; 
+            lista.forEach(i => { 
+                let a = getAuditorLimpio(i); 
+                if(a && a !== 'Desconocido') aC[a] = (aC[a]||0)+1; 
+            });
+            labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]); 
+            dataBarra = labelsBarra.map(a=>aC[a]);
         }
 
-        function graficarTMWH(lista) {
-            const hC = Array(24).fill(0);
-            lista.forEach(i => { 
-                if(i.FECHA_HORA) { 
-                    const strF = String(i.FECHA_HORA);
-                    const timePart = strF.includes('T') ? strF.split('T')[1] : strF.split(' ')[1];
-                    if(timePart) {
-                        const h = parseInt(timePart.split(':')[0]);
-                        if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
-                    }
-                } 
-            });
-
-            if(chartHoras) chartHoras.destroy();
-            const canvasH = document.getElementById('chartHoras');
-            if(canvasH) chartHoras = new Chart(canvasH.getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#292d5c', backgroundColor: 'rgba(41, 45, 92, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
-
-            const audSel = document.getElementById('select-auditor')?.value;
-            let labelsBarra = [], dataBarra = [];
-            
-            const tituloEl = document.getElementById('titulo-chart-auditores');
-            if (audSel) {
-                if(tituloEl) tituloEl.innerText = 'PROCESOS DE: ' + audSel.toUpperCase();
-                const pC = {}; 
-                lista.forEach(i => {
-                    const procStr = getProceso(i);
-                    const partes = procStr.includes('+') ? procStr.split('+') : [procStr];
-                    partes.forEach(p => { 
-                        let n = p.trim(); 
-                        if(n) pC[n] = (pC[n]||0)+1; 
-                    });
-                });
-                labelsBarra = Object.keys(pC).sort((a,b)=>pC[b]-pC[a]); 
-                dataBarra = labelsBarra.map(p=>pC[p]);
-            } else {
-                if(tituloEl) tituloEl.innerText = 'AUDITORÍAS POR AUDITOR';
-                const aC = {}; 
-                lista.forEach(i => { 
-                    let a = getAuditorLimpio(i); 
-                    if(a && a !== 'Desconocido') aC[a] = (aC[a]||0)+1; 
-                });
-                labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]); 
-                dataBarra = labelsBarra.map(a=>aC[a]);
+        if(chartAuditores) chartAuditores.destroy();
+        const canvasA = document.getElementById('chartAuditores');
+        if(canvasA) chartAuditores = new Chart(canvasA.getContext('2d'), { 
+            type: 'bar', 
+            data: { 
+                labels: labelsBarra, 
+                datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius: 3 }] 
+            }, 
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                plugins: { legend: { display: false } } 
             }
+        });
+    }
 
-            if(chartAuditores) chartAuditores.destroy();
-            const canvasA = document.getElementById('chartAuditores');
-            if(canvasA) chartAuditores = new Chart(canvasA.getContext('2d'), { 
-                type: 'bar', 
-                data: { 
-                    labels: labelsBarra, 
-                    datasets: [{ data: dataBarra, backgroundColor: '#ffc107', borderRadius: 3 }] 
-                }, 
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false, 
-                    plugins: { legend: { display: false } } 
+    function filtrarCaza() {
+        const fI = document.getElementById('fecha-inicio-caza')?.value, fF = document.getElementById('fecha-fin-caza')?.value;
+        const aud = document.getElementById('select-auditor-caza')?.value, txt = document.getElementById('search-caza')?.value.toLowerCase();
+        
+        let countFound = 0, sumFound = 0, countDfl = 0, sumDfl = 0;
+        const res = datosCaza.filter(d => {
+            const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
+            const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
+                          (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
+                          (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+            
+            if (match) {
+                if (esResultadofound(getProceso(d))) { 
+                    countFound++; 
+                    sumFound += getMonto(d); 
+                } else { 
+                    countDfl++; 
+                    sumDfl += getMonto(d); 
                 }
-            });
-        }
+            }
+            return match;
+        });
+        
+        document.getElementById('kpi-found-count').innerText = countFound.toLocaleString();
+        document.getElementById('kpi-found-usd').innerText = formatearDinero(sumFound);
+        document.getElementById('kpi-dfl-count').innerText = countDfl.toLocaleString();
+        document.getElementById('kpi-dfl-usd').innerText = formatearDinero(sumDfl);
 
-        // SECCIÓN 2: CAZA LOST
-        function filtrarCaza() {
-            const fI = document.getElementById('fecha-inicio-caza')?.value, fF = document.getElementById('fecha-fin-caza')?.value;
-            const aud = document.getElementById('select-auditor-caza')?.value, txt = document.getElementById('search-caza')?.value.toLowerCase();
-            
-            let countFound = 0, sumFound = 0, countDfl = 0, sumDfl = 0;
-            const res = datosCaza.filter(d => {
-                const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
-                const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                              (procCaza.length === 0 || procCaza.some(p => getProceso(d).includes(p))) &&
-                              (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
-                
-                if (match) {
-                    if (esResultadofound(getProceso(d))) { 
-                        countFound++; 
-                        sumFound += getMonto(d); 
-                    } else { 
-                        countDfl++; 
-                        sumDfl += getMonto(d); 
-                    }
+        document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
+            const esFound = esResultadofound(getProceso(i));
+            let mostrarId = getId(i); if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
+            return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td><td><strong style="color: ${esFound ? '#4caf50' : '#d08c1b'}">${formatearDinero(getMonto(i))}</strong></td></tr>`;
+        }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
+        
+        graficarCaza(res);
+    }
+
+    function graficarCaza(lista) {
+        const tC = {}; 
+        lista.forEach(i => { 
+            let p = getProceso(i).replace('CAZA - ',''); 
+            tC[p] = (tC[p]||0)+1; 
+        });
+        
+        if(chartTipoCaza) chartTipoCaza.destroy();
+        const canvasTC = document.getElementById('chartTipoCaza');
+        if(canvasTC) chartTipoCaza = new Chart(canvasTC.getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
+
+        const auditoresObj = {};
+        lista.forEach(i => { 
+            let a = getAuditorLimpio(i), monto = getMonto(i), esFound = esResultadofound(getProceso(i));
+            if (a && a !== 'Desconocido') {
+                if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
+                if (esFound) auditoresObj[a].found += monto; else auditoresObj[a].dfl += monto;
+                auditoresObj[a].total += monto;
+            }
+        });
+        
+        const as = Object.keys(auditoresObj).sort((a,b) => auditoresObj[b].total - auditoresObj[a].total);
+        if(chartMontoCaza) chartMontoCaza.destroy();
+        const canvasMC = document.getElementById('chartMontoCaza');
+        if(canvasMC) chartMontoCaza = new Chart(canvasMC.getContext('2d'), { 
+            type: 'bar', 
+            data: { labels: as, datasets: [ { label: 'Recuperado (Found)', data: as.map(a => auditoresObj[a].found), backgroundColor: '#4caf50', borderRadius: 2 }, { label: 'Analizado (DFL)', data: as.map(a => auditoresObj[a].dfl), backgroundColor: '#d08c1b', borderRadius: 2 } ] }, 
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }, scales: { x: { stacked: true }, y: { stacked: true } } }
+        });
+    }
+
+    function filtrarFG() {
+        const fI = document.getElementById('fecha-inicio-fg')?.value, fF = document.getElementById('fecha-fin-fg')?.value;
+        const aud = document.getElementById('select-auditor-fg')?.value, txt = document.getElementById('search-fg')?.value.toLowerCase();
+
+        const res = datosFG.filter(d => {
+            const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
+            return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
+                   (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+        });
+
+        document.getElementById('kpi-fg-count').innerText = res.length.toLocaleString();
+        document.getElementById('contenido-fg').innerHTML = res.length ? res.map(i => {
+            return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong style="color: var(--fg-header, #0284c7)">${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${getId(i)}</code></td></tr>`;
+        }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
+
+        graficarFG(res);
+    }
+
+    function graficarFG(lista) {
+        const hC = Array(24).fill(0);
+        lista.forEach(i => { 
+            if(i.FECHA_HORA) { 
+                const strF = String(i.FECHA_HORA);
+                const timePart = strF.includes('T') ? strF.split('T')[1] : strF.split(' ')[1];
+                if(timePart) {
+                    const h = parseInt(timePart.split(':')[0]);
+                    if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
                 }
-                return match;
-            });
-            
-            document.getElementById('kpi-found-count').innerText = countFound.toLocaleString();
-            document.getElementById('kpi-found-usd').innerText = formatearDinero(sumFound);
-            document.getElementById('kpi-dfl-count').innerText = countDfl.toLocaleString();
-            document.getElementById('kpi-dfl-usd').innerText = formatearDinero(sumDfl);
+            } 
+        });
 
-            document.getElementById('contenido-caza').innerHTML = res.length ? res.map(i => {
-                const esFound = esResultadofound(getProceso(i));
-                let mostrarId = getId(i); if(mostrarId.includes('TMP_') || mostrarId.includes('SIN_ID')) mostrarId = 'SIN ID ASIGNADO';
-                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong>${getProceso(i).replace('CAZA - ','')}</strong></td><td>${getAuditor(i)}</td><td><code>${mostrarId}</code></td><td><strong style="color: ${esFound ? '#4caf50' : '#d08c1b'}">${formatearDinero(getMonto(i))}</strong></td></tr>`;
-            }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
-            
-            graficarCaza(res);
-        }
+        if(chartHorasFG) chartHorasFG.destroy();
+        const canvasHFG = document.getElementById('chartHorasFG');
+        if(canvasHFG) chartHorasFG = new Chart(canvasHFG.getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
 
-        function graficarCaza(lista) {
-            const tC = {}; 
-            lista.forEach(i => { 
-                let p = getProceso(i).replace('CAZA - ',''); 
-                tC[p] = (tC[p]||0)+1; 
-            });
-            
-            if(chartTipoCaza) chartTipoCaza.destroy();
-            const canvasTC = document.getElementById('chartTipoCaza');
-            if(canvasTC) chartTipoCaza = new Chart(canvasTC.getContext('2d'), { type: 'doughnut', data: { labels: Object.keys(tC), datasets: [{ data: Object.values(tC), backgroundColor: ['#f5a623', '#292d5c', '#d08c1b', '#4caf50'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: {legend:{position:'right', labels:{font:{size:11}}}} }});
+        const aC = {}; lista.forEach(i => { let a = getAuditorLimpio(i); if(a && a !== 'Desconocido') aC[a] = (aC[a]||0)+1; });
+        const labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
+        const dataBarra = labelsBarra.map(a=>aC[a]);
 
-            const auditoresObj = {};
-            lista.forEach(i => { 
-                let a = getAuditorLimpio(i), monto = getMonto(i), esFound = esResultadofound(getProceso(i));
-                if (a && a !== 'Desconocido') {
-                    if (!auditoresObj[a]) auditoresObj[a] = { found: 0, dfl: 0, total: 0 };
-                    if (esFound) auditoresObj[a].found += monto; else auditoresObj[a].dfl += monto;
-                    auditoresObj[a].total += monto;
-                }
-            });
-            
-            const as = Object.keys(auditoresObj).sort((a,b) => auditoresObj[b].total - auditoresObj[a].total);
-            if(chartMontoCaza) chartMontoCaza.destroy();
-            const canvasMC = document.getElementById('chartMontoCaza');
-            if(canvasMC) chartMontoCaza = new Chart(canvasMC.getContext('2d'), { 
-                type: 'bar', 
-                data: { labels: as, datasets: [ { label: 'Recuperado (Found)', data: as.map(a => auditoresObj[a].found), backgroundColor: '#4caf50', borderRadius: 2 }, { label: 'Analizado (DFL)', data: as.map(a => auditoresObj[a].dfl), backgroundColor: '#d08c1b', borderRadius: 2 } ] }, 
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth: 12, font: {size: 10} } } }, scales: { x: { stacked: true }, y: { stacked: true } } }
-            });
-        }
-
-        // SECCIÓN 3: FOUNDS GENERALES WMS
-        function filtrarFG() {
-            const fI = document.getElementById('fecha-inicio-fg')?.value, fF = document.getElementById('fecha-fin-fg')?.value;
-            const aud = document.getElementById('select-auditor-fg')?.value, txt = document.getElementById('search-fg')?.value.toLowerCase();
-
-            const res = datosFG.filter(d => {
-                const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
-                return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
-                       (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
-            });
-
-            document.getElementById('kpi-fg-count').innerText = res.length.toLocaleString();
-            document.getElementById('contenido-fg').innerHTML = res.length ? res.map(i => {
-                return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong style="color: var(--fg-header, #0284c7)">${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${getId(i)}</code></td></tr>`;
-            }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
-
-            graficarFG(res);
-        }
-
-        function graficarFG(lista) {
-            const hC = Array(24).fill(0);
-            lista.forEach(i => { 
-                if(i.FECHA_HORA) { 
-                    const strF = String(i.FECHA_HORA);
-                    const timePart = strF.includes('T') ? strF.split('T')[1] : strF.split(' ')[1];
-                    if(timePart) {
-                        const h = parseInt(timePart.split(':')[0]);
-                        if(!isNaN(h) && h >= 0 && h < 24) hC[h]++; 
-                    }
-                } 
-            });
-
-            if(chartHorasFG) chartHorasFG.destroy();
-            const canvasHFG = document.getElementById('chartHorasFG');
-            if(canvasHFG) chartHorasFG = new Chart(canvasHFG.getContext('2d'), { type: 'line', data: { labels: Array.from({length:24},(_,i)=>`${String(i).padStart(2,'0')}:00`), datasets: [{ data: hC, borderColor: '#0284c7', backgroundColor: 'rgba(2, 132, 199, 0.1)', fill: true }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
-
-            const aC = {}; lista.forEach(i => { let a = getAuditorLimpio(i); if(a && a !== 'Desconocido') aC[a] = (aC[a]||0)+1; });
-            const labelsBarra = Object.keys(aC).sort((a,b)=>aC[b]-aC[a]);
-            const dataBarra = labelsBarra.map(a=>aC[a]);
-
-            if(chartAuditoresFG) chartAuditoresFG.destroy();
-            const canvasAFG = document.getElementById('chartAuditoresFG');
-            if(canvasAFG) chartAuditoresFG = new Chart(canvasAFG.getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#38bdf8', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
-        }
+        if(chartAuditoresFG) chartAuditoresFG.destroy();
+        const canvasAFG = document.getElementById('chartAuditoresFG');
+        if(canvasAFG) chartAuditoresFG = new Chart(canvasAFG.getContext('2d'), { type: 'bar', data: { labels: labelsBarra, datasets: [{ data: dataBarra, backgroundColor: '#38bdf8', borderRadius:3 }] }, options: { responsive: true, maintainAspectRatio: false, plugins:{legend:{display:false}} }});
+    }
 </script>
 </body>
 </html>
