@@ -464,9 +464,11 @@
     function formFecha(str) { return str ? String(str).replace('T', ' ').split('+')[0].split('.')[0] : ''; }
     function formatearDinero(num) { return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
+    // Evaluador estricto para Caza Lost
     function esResultadofound(p) {
-        const str = String(p).toUpperCase();
-        return str.includes('FOUND LP') || (str.includes('FOUND') && !str.includes('FOUND INV'));
+        const str = String(p).toUpperCase().trim();
+        if (str.includes('DFL')) return false;
+        return str.includes('CAZA - FOUND') || str.includes('FOUND LP') || str.includes('FOUND');
     }
 
     function toggleDropdown(id) { document.getElementById(id).classList.toggle('show'); }
