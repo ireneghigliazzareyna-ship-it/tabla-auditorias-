@@ -326,6 +326,10 @@
 
         <div class="kpi-container">
             <div class="kpi-card">
+                <div class="kpi-title">Piezas Totales Analizadas</div>
+                <div class="kpi-value" id="kpi-total-piezas" style="color: #1e293b;">0</div>
+            </div>
+            <div class="kpi-card">
                 <div class="kpi-title">Cant. Found Recuperados</div>
                 <div class="kpi-value" id="kpi-found-count" style="color: #4caf50;">0</div>
             </div>
@@ -400,6 +404,10 @@
                 <div class="kpi-title">Total Founds WMS Realizados</div>
                 <div class="kpi-value" id="kpi-fg-count" style="color: var(--fg-header)">0</div>
             </div>
+            <div class="kpi-card">
+                <div class="kpi-title">Monto Recuperado (USD)</div>
+                <div class="kpi-value" id="kpi-fg-usd" style="color: var(--fg-header)">$0.00</div>
+            </div>
         </div>
 
         <div class="charts-grid">
@@ -421,6 +429,7 @@
                         <th>Proceso WMS</th>
                         <th>Auditor</th>
                         <th>Inventory ID</th>
+                        <th>Monto USD</th>
                     </tr>
                 </thead>
                 <tbody id="contenido-fg"></tbody>
@@ -693,6 +702,9 @@
             return match;
         });
         
+        // Sumamos el total de piezas y las reflejamos en el nuevo KPI
+        document.getElementById('kpi-total-piezas').innerText = (countFound + countDfl).toLocaleString();
+        
         document.getElementById('kpi-found-count').innerText = countFound.toLocaleString();
         document.getElementById('kpi-found-usd').innerText = formatearDinero(sumFound);
         document.getElementById('kpi-dfl-count').innerText = countDfl.toLocaleString();
@@ -742,16 +754,21 @@
         const fI = document.getElementById('fecha-inicio-fg')?.value, fF = document.getElementById('fecha-fin-fg')?.value;
         const aud = document.getElementById('select-auditor-fg')?.value, txt = document.getElementById('search-fg')?.value.toLowerCase();
 
+        let sumFG = 0;
         const res = datosFG.filter(d => {
             const f = d.FECHA_HORA ? String(d.FECHA_HORA).substring(0, 10) : '';
-            return (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
+            const match = (!fI || f >= fI) && (!fF || f <= fF) && (!aud || getAuditor(d) === aud) &&
                    (!txt || Object.values(d).some(v => String(v).toLowerCase().includes(txt)));
+            if (match) sumFG += getMonto(d);
+            return match;
         });
 
         document.getElementById('kpi-fg-count').innerText = res.length.toLocaleString();
+        document.getElementById('kpi-fg-usd').innerText = formatearDinero(sumFG);
+
         document.getElementById('contenido-fg').innerHTML = res.length ? res.map(i => {
-            return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong style="color: var(--fg-header, #0284c7)">${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${getId(i)}</code></td></tr>`;
-        }).join('') : '<tr><td colspan="4" style="text-align:center;">Sin resultados</td></tr>';
+            return `<tr><td>${formFecha(i.FECHA_HORA)}</td><td><strong style="color: var(--fg-header, #0284c7)">${getProceso(i)}</strong></td><td>${getAuditor(i)}</td><td><code>${getId(i)}</code></td><td><strong>${formatearDinero(getMonto(i))}</strong></td></tr>`;
+        }).join('') : '<tr><td colspan="5" style="text-align:center;">Sin resultados</td></tr>';
 
         graficarFG(res);
     }
