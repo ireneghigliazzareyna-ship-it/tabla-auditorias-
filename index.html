@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Consolidado de Auditorías - MXNL01 v2.2</title>
+    <title>Dashboard Consolidado de Auditorías - MXNL01 v2.3</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -221,7 +221,7 @@
 <body>
 
 <div class="container">
-    <h1>Dashboard Consolidado de Auditorías - MXNL01 <span style="font-size:0.5em; color:#0284c7;">(v2.2 Match Data Studio)</span></h1>
+    <h1>Dashboard Consolidado de Auditorías - MXNL01 <span style="font-size:0.5em; color:#0284c7;">(v2.3 Match LDAPs)</span></h1>
     
     <div id="status">Cargando información desde BigQuery...</div>
 
@@ -444,6 +444,7 @@
     let procTMWH = [], procCaza = [];
     let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
 
+    // ----- AQUÍ ESTÁ LA ACTUALIZACIÓN PRINCIPAL -----
     function getAuditor(i) { 
         let a = i.AUDITOR || i.auditor || i.USUARIO || '';
         let str = String(a).toLowerCase().trim();
@@ -452,16 +453,17 @@
         if (str.includes('@')) str = str.split('@')[0];
         str = str.replace(/\./g, ' ').replace(/\s+/g, ' ').trim();
 
-        if (str.includes('saul') || str.includes('sanchez')) return 'Saul Sanchez';
-        if (str.includes('rosa') || str.includes('garcia')) return 'Rosa Garcia';
-        if (str.includes('alejandra') || str.includes('carrizales')) return 'Alejandra Carrizales';
-        if (str.includes('montserrat') || str.includes('covarrubias')) return 'Montserrat Covarrubias';
-        if (str.includes('adonay') || str.includes('ramirez')) return 'Adonay Ramirez';
-        if (str.includes('brenda') || str.includes('lira')) return 'Brenda Lira';
-        if (str.includes('blanca') || str.includes('martinez')) return 'Blanca Martinez';
-        if (str.includes('andy') || str.includes('mendez')) return 'Andy Mendez';
-        if (str.includes('irene') || str.includes('ghigliazza')) return 'Irene Ghigliazza Reyna';
-        if (str.includes('aracel') || str.includes('lara')) return 'Araceli Lara';
+        // Mapeo actualizado para integrar los nuevos LDAPs devueltos por el SQL
+        if (str.includes('ssanchezcant') || str.includes('saul') || str.includes('sanchez')) return 'Saul Sanchez';
+        if (str.includes('rgarciasilva') || str.includes('rosa') || str.includes('garcia')) return 'Rosa Garcia';
+        if (str.includes('acarrizalest') || str.includes('alejandra') || str.includes('carrizales')) return 'Alejandra Carrizales';
+        if (str.includes('mcovarrubias') || str.includes('montserrat') || str.includes('covarrubias')) return 'Montserrat Covarrubias';
+        if (str.includes('aramirezmaci') || str.includes('adonay') || str.includes('ramirez')) return 'Adonay Ramirez';
+        if (str.includes('bliraflores') || str.includes('brenda') || str.includes('lira')) return 'Brenda Lira';
+        if (str.includes('bmartinezbla') || str.includes('blanca') || str.includes('martinez')) return 'Blanca Martinez';
+        if (str.includes('andmendez') || str.includes('andy') || str.includes('mendez')) return 'Andy Mendez';
+        if (str.includes('ighigliazzar') || str.includes('irene') || str.includes('ghigliazza')) return 'Irene Ghigliazza Reyna';
+        if (str.includes('aralara') || str.includes('aracel') || str.includes('lara')) return 'Araceli Lara';
         
         return str.replace(/\b\w/g, l => l.toUpperCase());
     }
@@ -702,7 +704,6 @@
             return match;
         });
         
-        // Sumamos el total de piezas y las reflejamos en el nuevo KPI
         document.getElementById('kpi-total-piezas').innerText = (countFound + countDfl).toLocaleString();
         
         document.getElementById('kpi-found-count').innerText = countFound.toLocaleString();
