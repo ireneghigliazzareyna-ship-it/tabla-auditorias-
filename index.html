@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Consolidado de Auditorías - MXNL01 v2.3</title>
+    <title>Dashboard Consolidado de Auditorías - MXNL01 v2.4</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
@@ -221,7 +221,7 @@
 <body>
 
 <div class="container">
-    <h1>Dashboard Consolidado de Auditorías - MXNL01 <span style="font-size:0.5em; color:#0284c7;">(v2.3 Match LDAPs)</span></h1>
+    <h1>Dashboard Consolidado de Auditorías - MXNL01 <span style="font-size:0.5em; color:#0284c7;">(v2.4 Match WMS Final)</span></h1>
     
     <div id="status">Cargando información desde BigQuery...</div>
 
@@ -444,7 +444,6 @@
     let procTMWH = [], procCaza = [];
     let chartHoras, chartAuditores, chartTipoCaza, chartMontoCaza, chartHorasFG, chartAuditoresFG;
 
-    // ----- AQUÍ ESTÁ LA ACTUALIZACIÓN PRINCIPAL -----
     function getAuditor(i) { 
         let a = i.AUDITOR || i.auditor || i.USUARIO || '';
         let str = String(a).toLowerCase().trim();
